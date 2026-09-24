@@ -1,9 +1,28 @@
 {
-  "_comment": "Members 2 and 3 are placeholders — replace name, links and past projects before submission.",
+  "_comment": "Member 3 is a placeholder — replace name, links and past projects before submission; add GitHub/LinkedIn links for everyone.",
   "members": [
     {
+      "name": "Xusan Mirzabayev",
+      "role": "Team captain · coordination, website and deployment, results review",
+      "contributions": [
+        "Team registration and communication with the organizers",
+        "Website hosting and deployment (Railway), live demo checks",
+        "Review of detected events on the sample videos, report editing"
+      ],
+      "github": "https://github.com/",
+      "linkedin": "",
+      "portfolio": "",
+      "past_projects": [
+        {
+          "name": "WBIP — partner platform of the Assembly",
+          "url": "https://www.wbip.uz",
+          "note": "Deployment and operations of the Flask platform"
+        }
+      ]
+    },
+    {
       "name": "Abdulaziz Qosimov",
-      "role": "Team captain · pipeline architecture, tracking, risk estimator, packaging",
+      "role": "Pipeline architecture, tracking, rules, risk estimator, packaging",
       "contributions": [
         "Detector + ByteTrack integration, ffmpeg frame reader, time-budget engineering on 4K footage",
         "Scene geometry of the camera (road, crossings, islands, stop line) and the queue-aware rule engine",
@@ -13,23 +32,16 @@
       "linkedin": "",
       "portfolio": "",
       "past_projects": [
-        {"name": "HISOB — National Transport Hackathon 2026", "url": "", "note": "Transit payment analytics on 4.8M ATTO transactions; special prize for the best student team"},
-        {"name": "WBIP — partner platform of the Assembly", "url": "https://www.wbip.uz", "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"}
-      ]
-    },
-    {
-      "name": "Member 2",
-      "role": "Event rules · dev labels · error analysis",
-      "contributions": [
-        "Manual review of rule candidates on the sample videos (contact sheets), per-class threshold tuning",
-        "Annotation conventions and the browser annotator for dev labels",
-        "Failure cases for the report"
-      ],
-      "github": "https://github.com/",
-      "linkedin": "",
-      "portfolio": "",
-      "past_projects": [
-        {"name": "Project", "url": "", "note": "one line about the outcome"}
+        {
+          "name": "HISOB — National Transport Hackathon 2026",
+          "url": "",
+          "note": "Transit payment analytics on 4.8M ATTO transactions; special prize for the best student team"
+        },
+        {
+          "name": "WBIP — partner platform of the Assembly",
+          "url": "https://www.wbip.uz",
+          "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"
+        }
       ]
     },
     {
@@ -44,7 +56,11 @@
       "linkedin": "",
       "portfolio": "",
       "past_projects": [
-        {"name": "Project", "url": "", "note": "one line about the outcome"}
+        {
+          "name": "Project",
+          "url": "",
+          "note": "one line about the outcome"
+        }
       ]
     }
   ]
