@@ -5,7 +5,7 @@ Given an `.mp4` from a fixed CCTV camera the system returns every traffic event 
 `[start_sec, end_sec, label]` (Part A) and, frame by frame and causally, the probability that an
 accident starts within the next 5 seconds (Part B).
 
-Team: **<TEAM NAME>** (see [Team](#team)). Website: **https://trafficeye-production.up.railway.app**.
+Team: **TrafficEye** (see [Team](#team)). Website: **https://trafficeye-production.up.railway.app**.
 
 ## Quick start
 
@@ -113,16 +113,19 @@ Timestamps are rounded to 3 decimals by the harness.
 ## Time budget
 
 Measured with the organizers' harness (Part A + Part B, including all video decoding) on an RTX 4050
-laptop GPU, fp16 inference:
+laptop GPU (i7-13650HX), fp16 inference, nothing else running:
 
 | Footage | Part A | Part B | Total | Limit |
 |---|---|---|---|---|
-| 4K 25 fps, 40 s (synthetic upscale) | 0.31× | 0.58× | 0.89× of duration | 3× |
-| 1080p 30 fps, 12 min | 0.17× | 0.23× | 0.40× of duration | 3× |
-| 1080p 30 fps, 48 s, inside the Docker image, offline | | | 0.56× of duration | 3× |
+| C3896.MP4, 4K 30 fps 147 Mbit/s, 340 s | 99 s (0.29×) | 242 s (0.71×) | 341 s = 1.00× | 3× |
+| C3897.MP4, 318 s | 93 s (0.29×) | 215 s (0.68×) | 308 s = 0.97× | 3× |
+| C3902.MP4, 318 s | 99 s (0.31×) | 215 s (0.68×) | 314 s = 0.99× | 3× |
+| C3905.MP4, 128 s | 39 s (0.30×) | 72 s (0.56×) | 112 s = 0.87× | 3× |
+| 1080p 30 fps, 12 min crash compilation | | | 0.40× | 3× |
 
-Part B is dominated by the harness decoding every frame; our own work per frame is one resize and, every
-4th frame, a YOLO11n pass. Frame stride and input size are environment variables if the budget ever gets
+Part B is dominated by the harness decoding every 4K frame itself (about 0.5× of the duration on this CPU);
+our own work per frame is one resize and, every 4th frame, a YOLO11n pass. Part A reads the video through an
+ffmpeg pipe that subsamples and rescales inside the decoder (NVDEC when the ffmpeg build supports it). Frame stride and input size are environment variables if the budget ever gets
 tight on slower hardware:
 
 | Variable | Default | Meaning |
@@ -147,8 +150,35 @@ python -m pytest tests -q
 
 ## Results on the sample videos
 
-_To be filled after the final run: per-class F1 on our own labels, runtime per video, failure cases._
+The four sample clips are one signalised T-junction at rush hour (4K, 30 fps, 2–6 min each). Our output
+on them is `predictions_samples.json`; the annotated clips and timelines are on the website.
+
+| Clip | Length | Events we report |
+|---|---|---|
+| C3896.MP4 | 340 s | jaywalking 19, failure_to_yield 5 |
+| C3897.MP4 | 318 s | jaywalking 21, failure_to_yield 7, stopped_vehicle 1, accident 1 |
+| C3902.MP4 | 318 s | jaywalking 19, failure_to_yield 3, stopped_vehicle 2 |
+| C3905.MP4 | 128 s | jaywalking 7, failure_to_yield 2, stopped_vehicle 1, congestion 1 |
+
+We did not have labels for the samples; instead every rule's candidates were reviewed on contact sheets
+(6 frames per candidate) and thresholds were tightened until the reviewed candidates were plausible.
+What that review showed:
+
+- Pedestrians crossing outside the zebras are constant at this junction: `jaywalking` is our most frequent
+  class and most reviewed candidates were real.
+- `failure_to_yield` fires when a moving car passes through a zebra within 1.5 car heights of a pedestrian
+  on it; the reviewed cases were cars pushing through the crossing on green while people were still on it.
+- The `accident` in C3897 (315–318 s) is a false positive (an SUV passing pedestrians on the side zebra)
+  that survived the tightened rule; we left it in rather than tune against a single case.
+- `red_light` and `stop_line` are switched off: the lamp colour could not be read reliably from this
+  camera and the traffic-derived state stayed "red" through most of rush hour (see the report).
+- The risk curve raises an alarm (≥ 0.5) on about 1–2 % of frames, 2–5 alarm runs per clip, all on
+  fast approaches to a slow or stationary road user near the camera.
 
 ## Team
 
-_To be filled: members, roles, who did what._
+| Member | Role | Did what |
+|---|---|---|
+| Abdulaziz Qosimov (captain) | pipeline, tracking, risk estimator, packaging | detector + ByteTrack integration, ffmpeg reader and time budget, scene geometry, queue-aware rules, Part B, Docker, tests |
+| Member 2 | event rules, dev review | manual review of rule candidates on the samples, threshold tuning, annotation conventions |
+| Member 3 | EDA, website, report | EDA figures, team website and live demo (Railway), technical report |

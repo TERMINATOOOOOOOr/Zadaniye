@@ -1,48 +1,51 @@
 {
-  "_comment": "PLACEHOLDER — replace the members. Fields: name, role, contributions[], github, linkedin, portfolio, past_projects[] (a string or {name, url, note}).",
+  "_comment": "Members 2 and 3 are placeholders — replace name, links and past projects before submission.",
   "members": [
     {
-      "name": "Member 1",
-      "role": "Computer vision: detector and tracking",
+      "name": "Abdulaziz Qosimov",
+      "role": "Team captain · pipeline architecture, tracking, risk estimator, packaging",
       "contributions": [
-        "Fine-tuning YOLO11 on road-camera frames",
-        "ByteTrack integration, trajectory smoothing",
-        "Part B: TTC estimation and the risk curve"
+        "Detector + ByteTrack integration, ffmpeg frame reader, time-budget engineering on 4K footage",
+        "Scene geometry of the camera (road, crossings, islands, stop line) and the queue-aware rule engine",
+        "Part B causal risk estimator (time-to-collision, braking, queue awareness), determinism and offline packaging"
       ],
-      "github": "https://github.com/",
-      "linkedin": "https://www.linkedin.com/",
+      "github": "https://github.com/TERMINATOOOOOOOr",
+      "linkedin": "",
       "portfolio": "",
       "past_projects": [
-        {"name": "Project 1", "url": "", "note": "one line about the outcome"}
+        {"name": "HISOB — National Transport Hackathon 2026", "url": "", "note": "Transit payment analytics on 4.8M ATTO transactions; special prize for the best student team"},
+        {"name": "WBIP — partner platform of the Assembly", "url": "https://www.wbip.uz", "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"}
       ]
     },
     {
       "name": "Member 2",
-      "role": "Event rules and scene geometry",
+      "role": "Event rules · dev labels · error analysis",
       "contributions": [
-        "Lane, stop-line and crossing annotation",
-        "Rule engine for the 14 classes",
-        "Segment post-processing and format validation"
+        "Manual review of rule candidates on the sample videos (contact sheets), per-class threshold tuning",
+        "Annotation conventions and the browser annotator for dev labels",
+        "Failure cases for the report"
       ],
       "github": "https://github.com/",
-      "linkedin": "https://www.linkedin.com/",
+      "linkedin": "",
       "portfolio": "",
       "past_projects": [
-        "Project 2 — one line about the outcome"
+        {"name": "Project", "url": "", "note": "one line about the outcome"}
       ]
     },
     {
       "name": "Member 3",
-      "role": "Data, EDA, website and presentation",
+      "role": "EDA · website · presentation",
       "contributions": [
-        "EDA on the dev videos, heatmaps",
-        "Team website and demo stand",
-        "Report and presentation"
+        "EDA of the sample videos: object counts, motion heatmaps, direction field",
+        "Team website, live demo deployment on Railway",
+        "Technical report and presentation"
       ],
       "github": "https://github.com/",
-      "linkedin": "https://www.linkedin.com/",
+      "linkedin": "",
       "portfolio": "",
-      "past_projects": []
+      "past_projects": [
+        {"name": "Project", "url": "", "note": "one line about the outcome"}
+      ]
     }
   ]
 }

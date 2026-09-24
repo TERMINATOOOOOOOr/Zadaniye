@@ -17,7 +17,7 @@ from .tracking import Detector, kind_of
 from .video import resize_frame, scale_for
 
 TTC_T0 = 2.0            # риск растёт, когда TTC < 2 с
-HIST_SEC = 1.0          # история трека для оценки скорости (короче — отзывчивее)
+HIST_SEC = 1.5          # история трека для оценки скорости
 DECAY = 0.8             # затухание оценки между обновлениями без сигнала
 W_TTC, W_DEC, W_PED = 0.9, 0.35, 0.15
 DEC_REL = 2.5           # торможение сильнее 2.5 высот бокса/с² = резкое
@@ -25,7 +25,9 @@ BRAKE_OK = 0.7          # если фактическое замедление �
 STOP_REL = 0.15
 STOP_MARK_SEC = 1.5     # стоял ≥ 1.5 с → отмечаем ячейку как точку остановки
 MAX_PAIR_REL = 8.0      # пары дальше 8 высот друг от друга не рассматриваем
-MIN_H_FRAC = 0.02       # объекты ниже 2 % высоты кадра слишком далеко: скорость по ним шумная
+MIN_H_FRAC = 0.06       # объекты ниже 6 % высоты кадра слишком далеко: скорость по ним шумная, зазоры в перспективе нулевые
+LEADER_SLOW_REL = 0.5   # догон считаем опасным, только если лидер почти стоит...
+CROSS_ANGLE_DEG = 30.0  # ...или курсы пересекаются под заметным углом (едущие друг за другом в потоке — норма)
 FOLLOWER_MIN_REL = 1.5  # догоняющий должен ехать быстро (в высотах бокса/с), иначе это ползущая очередь
 CLOSING_MIN_REL = 1.2
 
@@ -55,6 +57,8 @@ class OnlineRisk:
         self.min_h = 20.0
         self.stop_cells: dict[tuple[int, int], set[int]] = {}
         self.stopped_since: dict[int, float] = {}
+        self.last = {"ttc": 0.0, "dec": 0.0, "ped": 0.0, "n": 0}   # компоненты последней оценки (диагностика)
+        self.prev_ttc = 0.0
 
     def reset(self, meta: dict) -> None:
         seed_everything()
@@ -69,6 +73,7 @@ class OnlineRisk:
         self.min_h = MIN_H_FRAC * h
         self.stop_cells = {}
         self.stopped_since = {}
+        self.prev_ttc = 0.0
         if self.scene is not None and tuple(self.scene.frame_size) != (w, h):
             self.scene = None   # сцена другой камеры — не используем
 
@@ -95,7 +100,11 @@ class OnlineRisk:
                 self.stopped_since.pop(tid, None)
         S = self._states()
         self._update_stop_cells(S, t_sec)
-        raw = self._raw_risk(S) ** 2   # квадрат: порог тревоги 0.5 достигается только при сильном сигнале
+        self._raw_risk(S)
+        # TTC-сигнал должен держаться два обновления подряд: одиночный выброс скорости — не тревога
+        ttc_eff = min(self.last["ttc"], self.prev_ttc)
+        self.prev_ttc = self.last["ttc"]
+        raw = min(1.0, W_TTC * ttc_eff + W_DEC * self.last["dec"] + W_PED * self.last["ped"]) ** 2   # квадрат: порог 0.5 только при сильном сигнале
         self.score = float(np.clip(max(raw, self.score * DECAY), 0.0, 1.0))
         return self.score
 
@@ -147,6 +156,7 @@ class OnlineRisk:
     def _raw_risk(self, S: dict) -> float:
         n = len(S["ids"])
         if n == 0:
+            self.last = {"ttc": 0.0, "dec": 0.0, "ped": 0.0, "n": 0}
             return 0.0
         veh = S["kind"] == "vehicle"
         x, y, vx, vy, h, w, acc, speed = (S[k] for k in ("x", "y", "vx", "vy", "h", "w", "acc", "speed"))
@@ -156,14 +166,15 @@ class OnlineRisk:
         m = veh & big & (acc < -DEC_REL * h) & (speed > 0.5 * h)
         if m.any():
             f_dec = float(np.clip((-acc[m] / (2 * DEC_REL * h[m])).max(), 0.0, 1.0))
-        # пешеход на проезжей части вне перехода
+        # пешеход на проезжей части вне перехода (флаг на объект: нужен и для пар машина–пешеход)
         f_ped = 0.0
+        ped_exposed = np.zeros(n, dtype=bool)
         if self.scene is not None and self.scene.road is not None:
             for i in np.flatnonzero(S["kind"] == "person"):
                 by = y[i] + h[i] / 2
                 if self.scene.in_road(x[i], by) and self.scene.crosswalk_at(x[i], by) is None:
+                    ped_exposed[i] = True
                     f_ped = 1.0
-                    break
         f_ttc = 0.0
         if n >= 2:
             rx = x[None, :] - x[:, None]; ry = y[None, :] - y[:, None]
@@ -195,6 +206,20 @@ class OnlineRisk:
                     speed_f = np.where(a_is_follower, speed[:, None], speed[None, :])
                     h_f = np.where(a_is_follower, h[:, None], h[None, :])
                     f = np.where(speed_f >= FOLLOWER_MIN_REL * h_f, f, f * 0.15)
+                    # догон едущего в ту же сторону лидера — обычное движение в потоке (зазор в перспективе нулевой)
+                    speed_l = np.where(a_is_follower, speed[None, :], speed[:, None])
+                    h_l = np.where(a_is_follower, h[None, :], h[:, None])
+                    cos_v = (vx[:, None] * vx[None, :] + vy[:, None] * vy[None, :]) / np.maximum(speed[:, None] * speed[None, :], 1e-6)
+                    crossing_course = cos_v < np.cos(np.radians(CROSS_ANGLE_DEG))
+                    f = np.where((speed_l < LEADER_SLOW_REL * h_l) | crossing_course, f, f * 0.1)
+                    # встречные машины на соседних проезжих частях в перспективе выглядят «лоб в лоб» — не курс на столкновение
+                    f = np.where(cos_v < -0.7, 0.0, f)
+                    # пешеход в паре: только если он на проезжей части вне перехода (у зебры машины проезжают рядом штатно)
+                    is_ped = S["kind"] == "person"
+                    ped_pair = is_ped[:, None] | is_ped[None, :]
+                    ped_ok = ped_exposed[:, None] | ped_exposed[None, :]
+                    ped_factor = 0.5 if self.scene is None else 0.1
+                    f = np.where(ped_pair & ~ped_ok, f * ped_factor, f)
                     # лидер стоит в точке штатных остановок — вероятно очередь
                     idx = np.arange(n)
                     leader_idx = np.where(a_is_follower, idx[None, :], idx[:, None])
@@ -206,4 +231,5 @@ class OnlineRisk:
                     in_queue = stopped_obj & (neigh >= 1)
                     f = np.where(in_queue[leader_idx], f * 0.2, f)
                     f_ttc = float(np.max(np.where(ok, f, 0.0)))
+        self.last = {"ttc": f_ttc, "dec": f_dec, "ped": f_ped, "n": n}
         return float(min(1.0, W_TTC * f_ttc + W_DEC * f_dec + W_PED * f_ped))
