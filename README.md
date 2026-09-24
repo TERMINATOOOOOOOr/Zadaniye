@@ -31,7 +31,7 @@ configs/scene.json     scene geometry of the camera (road, lanes, crossings, sto
 src/                   the pipeline: video reading, detection+tracking, scene geometry, rules per class,
                        segment post-processing, causal risk estimator, EDA and rendering
 tools/                 annotator.html (labelling), scene_editor.html (scene geometry), inspect_video.py,
-                       run_samples.py (batch run + website materials)
+                       ingest_samples.py (copy/probe the samples), run_samples.py (batch run + website materials)
 tests/                 format, overlap, time-budget, determinism and causality checks (pytest)
 site/                  the team website (FastAPI); see site/README.md. railway.json at the root deploys it
 predictions_samples.json   our output on the sample videos
