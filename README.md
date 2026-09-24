@@ -179,6 +179,6 @@ What that review showed:
 
 | Member | Role | Did what |
 |---|---|---|
-| Xusan Mirzabayev (captain) | coordination, website, deployment | registration, organizer communication, Railway hosting and demo checks, review of results |
-| Abdulaziz Qosimov | pipeline, tracking, rules, risk estimator, packaging | detector + ByteTrack integration, ffmpeg reader and time budget, scene geometry, queue-aware rules, Part B, Docker, tests |
-| Member 3 | EDA, website, report | EDA figures, team website and live demo (Railway), technical report |
+| Xusan Mirzabayev (captain) | pipeline, tracking, risk estimator, deployment | detector + ByteTrack integration, ffmpeg reader and time budget, Part B, Docker, tests, Railway hosting, organizer communication |
+| Member 2 | scene geometry, event rules, dev review | scene drawing, queue-aware rules, manual review of candidates on the samples, threshold tuning |
+| Member 3 | EDA, website, report | EDA figures, website content and results pages, technical report |
