@@ -31,12 +31,12 @@ MEDIA_DIR = STATIC_DIR / "media"
 ANNOTATED_DIRS = ("media", "results")  # где искать <name>_annotated.mp4, если путь не указан
 
 # --- Демо / очередь задач ---------------------------------------------------
-MAX_UPLOAD_MB = 200
+MAX_UPLOAD_MB = 2500  # 2 минуты 4K с этой камеры (147 Мбит/с) ≈ 2.2 ГБ
 MAX_DURATION_SEC = 120
 JOBS_DIR = SITE_DIR / "jobs_store"  # временные файлы задач (в .gitignore)
 JOB_TTL_SEC = 2 * 3600  # задачи старше этого удаляются
 JOB_CLEANUP_INTERVAL_SEC = 300
-RISK_FRAME_STRIDE = 2  # каждый N-й кадр идёт в RiskEstimator.step
+RISK_FRAME_STRIDE = 4  # каждый N-й кадр идёт в RiskEstimator.step (демо на CPU)
 ANNOTATE_MAX_SIDE = 960  # длинная сторона аннотированного видео
 API_WAIT_TIMEOUT_SEC = 900  # сколько /api/detect ждёт результат синхронно
 EXPECTED_DETECT_FACTOR = 1.0  # оценка: detect_events ~ N x длительность видео (для прогресс-бара)
