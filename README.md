@@ -5,7 +5,7 @@ Given an `.mp4` from a fixed CCTV camera the system returns every traffic event 
 `[start_sec, end_sec, label]` (Part A) and, frame by frame and causally, the probability that an
 accident starts within the next 5 seconds (Part B).
 
-Team: **<TEAM NAME>** (see [Team](#team)). Website: **<SITE URL>**.
+Team: **<TEAM NAME>** (see [Team](#team)). Website: **https://trafficeye-production.up.railway.app**.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ src/                   the pipeline: video reading, detection+tracking, scene ge
 tools/                 annotator.html (labelling), scene_editor.html (scene geometry), inspect_video.py,
                        run_samples.py (batch run + website materials)
 tests/                 format, overlap, time-budget, determinism and causality checks (pytest)
-site/                  the team website (FastAPI); see site/README.md
+site/                  the team website (FastAPI); see site/README.md. railway.json at the root deploys it
 predictions_samples.json   our output on the sample videos
 ```
 

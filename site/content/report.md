@@ -1,31 +1,49 @@
-> Placeholder: fill in after the final run on the dev videos and the organisers' samples.
+# Technical report
+
+_Draft written before the sample videos became available; the numbers on our own labels will be added after the final run._
+
+## What we built
+
+A detector-plus-rules system for a fixed road camera. A COCO-pretrained YOLO11s finds road users,
+ByteTrack turns detections into trajectories, a hand-drawn scene (lanes, crossings, stop lines, signal
+ROI) gives the trajectories meaning, and one small rule per event class turns them into time segments.
+A separate causal estimator (YOLO11n, every 4th frame) scores the risk of an accident from time-to-collision,
+braking and pedestrians on the carriageway. Everything is deterministic, offline and runs at about 0.9× of
+the video duration on 4K footage with a laptop GPU (limit: 3×).
 
 ## What worked
 
-- **Detector + tracker fit the CPU budget.** Every 2nd frame, YOLO11n/s and ByteTrack give ~1× video duration against a 3× budget.
-- **Rules for the "geometric" classes** (`wrong_way`, `stopped_vehicle`, `jaywalking`, `congestion`) are stable once the scene markings are set explicitly.
-- **Segment post-processing** lifts F1 noticeably at tIoU 0.5–0.7: without gap merging, events were split into 2–3 pieces.
-- **Part B via TTC** gives an early signal 2–4 s before contact on the dev videos with real accidents (numbers after the run).
+- **Relative thresholds.** Expressing speeds and distances in box heights per second made one set of
+  thresholds work across the whole field of view; nothing had to be calibrated in metres.
+- **Queue awareness.** The single biggest source of false alarms was "a car joins a queue at a red light":
+  it looks like a rear-end collision, a stopped vehicle and congestion at once. Treating a stationary
+  neighbour or a regular stop location as "queue" removed almost all of it on real intersection footage.
+- **Causality by construction.** The risk estimator has no access to the file and no access to Part A;
+  regular stop locations are learned only from frames already seen.
+- **Time budget.** fp16 inference, a frame stride of 3 for Part A and 4 for Part B, and `grab()` for the
+  skipped frames keep 4K within a third of the budget.
+- **Engineering.** The organizers' harness and metric were used unchanged from the first hour; a Docker
+  image reproduces the two official commands offline; two consecutive runs give identical output.
 
-## What did not work
+## What did not work (or is not solved)
 
-- **`accident` vs `near_miss`** — the boundary is blurry with TTC alone; a clip classifier on top of the candidates is needed.
-- **Traffic-light phase** is inferred from flow behaviour rather than the signal itself — on empty junctions `red_light` and `stop_line` are missed.
-- **`illegal_turn` / `solid_line_crossing`** are sensitive to lane-marking quality; config mistakes immediately produce false positives.
-- **Night and rain** — the detector loses small objects, the tracker breaks ids, the rules flicker.
+- `fire_smoke` is not predicted: we found no reliable open-weights detector and no examples to tune a
+  colour heuristic on. A missed class costs one zero in the macro average; a noisy one would cost the same
+  and add false positives elsewhere.
+- Classes that need the scene (`red_light`, `stop_line`, `jaywalking`, `failure_to_yield`,
+  `solid_line_crossing`, `illegal_turn`) are only as good as the scene file. Without `camera.md` we drew
+  the scene ourselves from the sample frames.
+- Crash compilations from other cameras produced spurious U-turns and near misses at clip cuts; this
+  does not happen on a single fixed camera, but it shows the rules trust track continuity.
+- Boundaries at IoU 0.7 remain the hardest part: the annotation conventions (e.g. "all involved objects
+  stop moving") are implemented literally, but the exact frame an annotator chose can still differ by a
+  second or two.
 
-## Honest numbers
+## What we would do next
 
-| Metric | Value |
-|---|---|
-| Score_A (mean F1 @ tIoU 0.3/0.5/0.7) | — after the run |
-| Score_B (AP, early warning) | — after the run |
-| Time per 1 min of video (CPU) | — after the run |
-
-## What comes next
-
-1. A clip classifier for the `accident` / `near_miss` pair (a small 3D-CNN or averaged detector embeddings).
-2. Automatic lane and stop-line estimation from accumulated trajectories — drop the manual config.
-3. A traffic-light state detector when the signal is in frame.
-4. Detector fine-tuning on night and rain frames.
-5. Calibrating the Part B risk on time-to-event, not only on TTC.
+- Label more footage from the same camera and replace the hand-tuned thresholds by a small
+  gradient-boosted classifier over the same trajectory features.
+- A short clip classifier for `accident` / `near_miss` trained on public dashcam/CCTV crash datasets
+  (DoTA, CCD) to re-score the rule candidates.
+- Read the traffic signal from vehicle behaviour when the light itself is not visible.
+- An operator dashboard: events per hour, per lane, per class, with the annotated clips.
