@@ -1,0 +1,39 @@
+# окружение и кэши
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+
+# данные: сэмплы организаторов и dev-видео не коммитим (лицензия/размер)
+data/samples/
+data/dev/
+*.MP4
+*.mp4
+*.avi
+*.y4m
+*.mjpeg
+!site/static/media/*.mp4
+
+# выходы прогонов (кроме predictions_samples.json в корне)
+out/
+runs/
+*.log
+
+# веса: yolo11*.pt коммитим (≤ 60 МБ), всё остальное нет
+weights/*
+!weights/yolo11n.pt
+!weights/yolo11s.pt
+!weights/download.sh
+!weights/README.md
+
+# IDE / ОС
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pycache__/
+.pytest_cache/

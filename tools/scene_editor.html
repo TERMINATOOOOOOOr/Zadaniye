@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор сцены</title>
+<style>
+:root{--bg:#111316;--panel:#191c21;--panel2:#20242b;--line:#2c313a;--text:#e7e9ec;--muted:#8a919e;--accent:#4f8cff;--danger:#ff5252;--warn:#ffb300}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.35 system-ui,"Segoe UI",Roboto,sans-serif;display:grid;grid-template-rows:44px minmax(0,1fr);grid-template-columns:300px minmax(0,1fr);height:100vh;overflow:hidden}
+button,select,input,textarea{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:3px 8px}
+button{cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+input[type=number]{width:72px;padding:2px 4px;text-align:right}
+input[type=checkbox]{margin:0 3px 0 0;vertical-align:-2px}
+textarea{width:100%;resize:vertical}
+kbd{display:inline-block;min-width:18px;padding:0 4px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;background:#0d0f12;font:11px/16px ui-monospace,Consolas,monospace;text-align:center;color:var(--muted)}
+header{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
+header h1{font-size:14px;margin:0 8px 0 0;font-weight:600;white-space:nowrap}
+#status{margin-left:auto;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#status.err{color:var(--danger)}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:10px}
+section h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+.muted{color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tool{display:flex;align-items:center;gap:6px;padding:2px 4px;border-radius:4px;cursor:pointer}
+.tool.on{background:var(--panel2);outline:1px solid var(--accent)}
+.tool kbd{margin-left:auto}
+.prow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:3px 0;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow input:not([type]){flex:1;min-width:60px}
+.lay{display:flex;align-items:center;justify-content:space-between;padding:3px 0 1px;border-top:1px solid var(--line)}
+.lay label{cursor:pointer}
+.obj{padding:1px 4px 1px 22px;cursor:pointer;border-radius:3px;font-size:12px}
+.obj.sel{background:#2a3242}
+.obj:hover{background:var(--panel2)}
+.warn{color:var(--warn);font-size:11px}
+.conv{margin:6px 0 0;padding:0;list-style:none;font-size:11.5px}
+.conv li{padding:3px 0;border-top:1px solid var(--line)}
+details{border:1px solid var(--line);border-radius:4px;padding:6px}
+summary{cursor:pointer;color:var(--muted);font-size:12px}
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#vpanel{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:4px 10px;background:var(--panel)}
+.vrow{display:flex;gap:10px;align-items:flex-start;padding-top:4px}
+video{height:150px;max-width:50%;background:#000;outline:none}
+.vbtns{display:flex;flex-wrap:wrap;gap:6px}
+#wrap{flex:1;min-height:120px;position:relative;background:#0b0c0e}
+#cv{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+#hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);pointer-events:none}
+#hint[hidden]{display:none}
+#foot{display:flex;gap:16px;padding:4px 10px;font:12px ui-monospace,Consolas,monospace;color:var(--muted);background:var(--panel);border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+ <h1>Редактор сцены</h1>
+ <button id="bVideo">Видео…</button>
+ <button id="bImage">Кадр PNG/JPG…</button>
+ <button id="bImport">Импорт scene.json…</button>
+ <button id="bDownload" class="primary">Скачать scene.json</button>
+ <button id="bCopy">Скопировать</button>
+ <button id="bClear">Очистить</button>
+ <span id="status">Загрузите видео и возьмите кадр, или откройте кадр PNG/JPG</span>
+ <input id="fVideo" type="file" accept="video/*,.mp4,.MP4" hidden>
+ <input id="fImage" type="file" accept="image/png,image/jpeg" hidden>
+ <input id="fJson" type="file" accept=".json,application/json" hidden>
+</header>
+<aside>
+ <section><h2>Инструменты</h2><div id="tools"></div></section>
+ <section><h2>Объект</h2><div id="propBody"></div></section>
+ <section><h2>Слои</h2><label>прозрачность <input id="opacity" type="range" min="0.1" max="1" step="0.05" value="0.6" style="width:120px;vertical-align:middle"></label><div id="layers"></div></section>
+ <section><h2>Заметки</h2><textarea id="notes" rows="3" placeholder="notes"></textarea></section>
+ <details><summary>Горячие клавиши</summary>
+  <ul class="conv">
+   <li>клик — вершина · <kbd>Enter</kbd> / двойной клик — закончить · правый клик — убрать вершину</li>
+   <li><kbd>Esc</kbd> отменить черновик / снять выбор · <kbd>Del</kbd> удалить объект</li>
+   <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> отмена · в режиме <kbd>V</kbd> вершины выбранного объекта можно тянуть</li>
+   <li>клик рядом с чужой вершиной прилипает к ней (общие рёбра полос)</li>
+   <li>колесо — зум · <kbd>Space</kbd>+drag или средняя кнопка — панорама · <kbd>0</kbd> вписать</li>
+  </ul>
+ </details>
+</aside>
+<main>
+ <details id="vpanel" open><summary>Видео · <span id="vtime">не загружено</span></summary>
+  <div class="vrow">
+   <video id="video" controls preload="metadata" tabindex="-1"></video>
+   <div class="vbtns"><button data-dt="-1">−1 с</button><button data-dt="-0.04">−кадр</button><button data-dt="0.04">+кадр</button><button data-dt="1">+1 с</button><button id="bGrab" class="primary">Взять кадр</button></div>
+  </div>
+ </details>
+ <div id="wrap"><canvas id="cv"></canvas><div id="hint">нет кадра</div></div>
+ <div id="foot"><span id="coords">x, y: —</span><span id="fsize">кадр: —</span><span id="ppm">px/m: —</span></div>
+</main>
+<script>
+'use strict';
+// ---------- слои: имя, цвет, вид геометрии, единственность, клавиша, префикс имени ----------
+const LAYERS = {
+ road:         { name: 'Дорога',        color: '#8a8f98', kind: 'poly', single: true,  key: '1' },
+ lanes:        { name: 'Полосы',        color: '#4f8cff', kind: 'poly', key: '2', prefix: 'L' },
+ crosswalks:   { name: 'Переходы',      color: '#ffd600', kind: 'poly', key: '3', prefix: 'cw' },
+ intersection: { name: 'Перекрёсток',   color: '#d500f9', kind: 'poly', single: true,  key: '4' },
+ stop_lines:   { name: 'Стоп-линии',    color: '#ff3b3b', kind: 'seg',  key: '5', prefix: 'sl' },
+ solid_lines:  { name: 'Сплошные',      color: '#ffffff', kind: 'line', key: '6', prefix: 's' },
+ signal:       { name: 'Светофор ROI',  color: '#00e676', kind: 'rect', single: true,  key: '7' },
+ scale:        { name: 'Масштаб',       color: '#ff8c00', kind: 'seg',  single: true,  key: '8' },
+};
+const TOOLS = [
+ ...Object.entries(LAYERS).map(([id, L]) => ({ id, name: L.name, color: L.color, key: L.key })),
+ { id: 'dir',    name: 'Направление / подход', key: 'D' },
+ { id: 'select', name: 'Выбор / правка',       key: 'V' },
+];
+for (const t of TOOLS) t.code = (/\d/.test(t.key) ? 'Digit' : 'Key') + t.key;
+const ALLOWED = [['straight', 'прямо'], ['left', 'налево'], ['right', 'направо'], ['uturn', 'разворот']];
+const HIT = 8; // радиус захвата, экранных px
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const C = $('#cv'), ctx = C.getContext('2d'), V = $('#video');
+
+// ---------- состояние ----------
+let objs = [];            // объекты сцены: {id,layer,name,pts:[[x,y]],...}
+let signalVisible = false;
+let ppmImported = null;   // px_per_meter из импорта, когда точек масштаба нет
+let frame = null;         // изображение кадра (canvas или Image)
+let frameSize = null;     // [w,h] в пикселях оригинала
+let frameName = '';
+let tool = 'lanes';
+let draft = null;         // {layer, pts}
+let selId = -1, nextId = 1;
+let hover = null;         // позиция мыши в экранных координатах
+let drag = null;          // {o,i} — вершина | {pan:true,...} — панорама
+let spaceDown = false;
+let view = { s: 1, ox: 0, oy: 0 };
+let alpha = .6;
+const undoStack = [];
+const layerVis = Object.fromEntries(Object.keys(LAYERS).map(k => [k, true]));
+const sel = () => objs.find(o => o.id === selId);
+
+function setStatus(msg, err) { const s = $('#status'); s.textContent = msg; s.classList.toggle('err', !!err); }
+
+// ---------- геометрия ----------
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const round4 = x => Math.round(x * 1e4) / 1e4;
+function unit(a, b) { const d = dist(a, b); return d < 1e-6 ? null : [round4((b[0] - a[0]) / d), round4((b[1] - a[1]) / d)]; }
+function centroid(pts) { return [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]; }
+function area(pts) { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; }
+function inPoly(p, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+function distSeg(p, a, b) {
+  const l2 = dist(a, b) ** 2; if (l2 === 0) return dist(p, a);
+  const t = clamp(((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / l2, 0, 1);
+  return dist(p, [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]);
+}
+function nearPath(p, pts, closed) {
+  let m = Infinity;
+  for (let i = 0; i < pts.length - (closed ? 0 : 1); i++) m = Math.min(m, distSeg(p, pts[i], pts[(i + 1) % pts.length]));
+  return m;
+}
+const rectOf = ([a, b]) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])];
+const inRect = (p, pts) => { const [x, y, w, h] = rectOf(pts); return p[0] >= x && p[0] <= x + w && p[1] >= y && p[1] <= y + h; };
+
+// ---------- вид: кадр ↔ экран ----------
+const toScr = p => [view.ox + p[0] * view.s, view.oy + p[1] * view.s];
+const toImg = p => [(p[0] - view.ox) / view.s, (p[1] - view.oy) / view.s];
+const fitScale = () => Math.min((C.clientWidth - 20) / frameSize[0], (C.clientHeight - 20) / frameSize[1]);
+function fit() {
+  if (!frameSize) return;
+  view.s = fitScale();
+  view.ox = (C.clientWidth - frameSize[0] * view.s) / 2;
+  view.oy = (C.clientHeight - frameSize[1] * view.s) / 2;
+}
+const scrPos = e => { const r = C.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+
+// ---------- отмена и сохранение ----------
+function snap() { undoStack.push(JSON.stringify({ objs, signalVisible })); if (undoStack.length > 60) undoStack.shift(); }
+function undo() {
+  if (draft && draft.pts.length) { draft.pts.pop(); if (!draft.pts.length) draft = null; return render(); }
+  if (!undoStack.length) return setStatus('Отменять нечего');
+  ({ objs, signalVisible } = JSON.parse(undoStack.pop()));
+  if (!sel()) selId = -1;
+  commit(); setStatus('Отменено');
+}
+function save() {
+  try { localStorage.setItem('scene:state', JSON.stringify({ objs, signalVisible, notes: $('#notes').value, frameSize, frameName, ppmImported, nextId })); }
+  catch { setStatus('Не удалось сохранить в localStorage', true); }
+}
+function restore() {
+  try {
+    const st = JSON.parse(localStorage.getItem('scene:state'));
+    if (st) {
+      ({ objs = [], signalVisible = false, frameSize = null, frameName = '', ppmImported = null, nextId = 1 } = st);
+      $('#notes').value = st.notes || '';
+    }
+    const du = localStorage.getItem('scene:frame');
+    if (du && frameSize) { const img = new Image(); img.onload = () => { frame = img; fit(); render(); }; img.src = du; }
+  } catch { /* повреждённое хранилище игнорируем */ }
+}
+function commit() { save(); render(); renderLayers(); renderProps(); }
+
+// ---------- кадр ----------
+function setFrame(src, w, h, name) {
+  if (frameSize && objs.length && (frameSize[0] !== w || frameSize[1] !== h)) setStatus(`Размер кадра ${w}×${h} отличается от прежнего ${frameSize[0]}×${frameSize[1]} — координаты объектов не пересчитаны`, true);
+  else setStatus(`Кадр ${w}×${h} из ${name}`);
+  frame = src; frameSize = [w, h]; frameName = name;
+  // в localStorage кладём уменьшенную JPEG-копию
+  const k = Math.min(1, 1600 / w), th = document.createElement('canvas');
+  th.width = Math.round(w * k); th.height = Math.round(h * k);
+  th.getContext('2d').drawImage(src, 0, 0, th.width, th.height);
+  try { localStorage.setItem('scene:frame', th.toDataURL('image/jpeg', .75)); } catch { /* превышена квота — кадр просто не переживёт перезагрузку */ }
+  $('#hint').hidden = true;
+  fit(); commit();
+}
+$('#bGrab').onclick = () => {
+  if (!V.videoWidth) return setStatus('Видео не загружено', true);
+  const c = document.createElement('canvas'); c.width = V.videoWidth; c.height = V.videoHeight;
+  c.getContext('2d').drawImage(V, 0, 0);
+  setFrame(c, c.width, c.height, `${frameName.split(' @ ')[0]} @ ${V.currentTime.toFixed(2)} с`);
+};
+function loadImage(f) {
+  const img = new Image();
+  img.onload = () => { setFrame(img, img.naturalWidth, img.naturalHeight, f.name); URL.revokeObjectURL(img.src); };
+  img.src = URL.createObjectURL(f);
+}
+function loadVideo(f) {
+  V.src = URL.createObjectURL(f); frameName = f.name;
+  $('#vpanel').open = true;
+  setStatus(`Видео ${f.name}: выберите момент и нажмите «Взять кадр»`);
+}
+V.addEventListener('timeupdate', () => { $('#vtime').textContent = `${V.currentTime.toFixed(2)} с`; });
+V.addEventListener('loadedmetadata', () => { $('#vtime').textContent = `${V.videoWidth}×${V.videoHeight}, ${V.duration.toFixed(1)} с`; });
+V.addEventListener('focus', () => V.blur());
+document.querySelectorAll('.vbtns [data-dt]').forEach(b => { b.onclick = () => { V.pause(); V.currentTime = clamp(V.currentTime + +b.dataset.dt, 0, V.duration || 0); b.blur(); }; });
+
+// ---------- объекты ----------
+function autoName(layer) {
+  const L = LAYERS[layer]; if (L.single) return layer;
+  const names = new Set(objs.filter(o => o.layer === layer).map(o => o.name));
+  for (let i = 1; ; i++) if (!names.has(L.prefix + i)) return L.prefix + i;
+}
+function select(id) { selId = id; render(); renderLayers(); renderProps(); }
+function deleteSel() {
+  const o = sel(); if (!o) return;
+  snap(); objs = objs.filter(x => x !== o); selId = -1;
+  if (o.layer === 'lanes') for (const s of objs) if (s.layer === 'stop_lines') s.lanes = s.lanes.filter(n => n !== o.name);
+  commit(); setStatus(`Удалено: ${o.name}`);
+}
+function renameSel(name) {
+  const o = sel(); name = name.trim(); if (!o || !name || name === o.name) return;
+  snap();
+  if (o.layer === 'lanes') for (const s of objs) if (s.layer === 'stop_lines') s.lanes = s.lanes.map(n => n === o.name ? name : n);
+  o.name = name; commit();
+}
+const clampPt = p => [Math.round(clamp(p[0], 0, frameSize[0])), Math.round(clamp(p[1], 0, frameSize[1]))];
+const draftKind = () => draft.layer === 'dir' ? 'seg' : LAYERS[draft.layer].kind;
+
+function snapVertex(sp) { // прилипание к ближайшей вершине существующих объектов (общие рёбра полос)
+  let best = null, bd = HIT;
+  for (const o of objs) if (layerVis[o.layer]) for (const p of o.pts) { const d = dist(toScr(p), sp); if (d < bd) { bd = d; best = p.slice(); } }
+  return best;
+}
+function addDraftPoint(sp) {
+  if (tool === 'dir') { const o = sel(); if (!o || (o.layer !== 'lanes' && o.layer !== 'stop_lines')) return setStatus('Сначала выберите полосу или стоп-линию (V), затем два клика: откуда → куда', true); }
+  if (!draft) draft = { layer: tool, pts: [] };
+  draft.pts.push(snapVertex(sp) || clampPt(toImg(sp)));
+  const k = draftKind();
+  if ((k === 'seg' || k === 'rect') && draft.pts.length === 2) finishDraft(); else render();
+}
+function finishDraft() {
+  if (!draft) return;
+  const k = draftKind(), need = k === 'poly' ? 3 : 2;
+  if (draft.pts.length < need) return setStatus(`Нужно минимум ${need} точки`, true);
+  const { layer, pts } = draft; draft = null;
+  if (layer === 'dir') {
+    const o = sel(), v = unit(pts[0], pts[1]);
+    if (!o || !v) return render();
+    snap(); if (o.layer === 'lanes') o.direction = v; else o.approach = v;
+    commit(); return setStatus(`${o.name}: вектор [${v}]`);
+  }
+  snap();
+  if (LAYERS[layer].single) objs = objs.filter(o => o.layer !== layer);
+  const o = { id: nextId++, layer, name: autoName(layer), pts };
+  if (layer === 'lanes') { o.direction = null; o.allowed = ['straight']; }
+  if (layer === 'stop_lines') { o.approach = null; o.lanes = []; }
+  if (layer === 'scale') o.meters = 0;
+  if (layer === 'signal') signalVisible = true;
+  objs.push(o); selId = o.id; commit();
+  setStatus(`Добавлено: ${o.name}${layer === 'lanes' ? ' — задайте направление (D)' : layer === 'stop_lines' ? ' — задайте подход (D)' : layer === 'scale' ? ' — введите расстояние в метрах' : ''}`);
+  if (layer === 'scale') $('#pMeters')?.focus();
+}
+function cancelDraft() { draft = null; render(); }
+function setTool(id) { tool = id; if (draft && draft.layer !== id) draft = null; renderTools(); render(); }
+
+// ---------- попадания ----------
+function hitVertex(sp) {
+  const o = sel(); if (!o) return null;
+  for (let i = o.pts.length - 1; i >= 0; i--) if (dist(toScr(o.pts[i]), sp) <= HIT) return { o, i };
+  return null;
+}
+function hitObject(sp) {
+  const hits = [];
+  for (const o of objs) {
+    if (!layerVis[o.layer]) continue;
+    const L = LAYERS[o.layer], pts = o.pts.map(toScr);
+    if (L.kind === 'poly' ? (inPoly(sp, pts) || nearPath(sp, pts, true) <= HIT) : L.kind === 'rect' ? inRect(sp, pts) : nearPath(sp, pts, false) <= HIT)
+      hits.push({ o, a: L.kind === 'poly' ? area(pts) : L.kind === 'rect' ? area([pts[0], [pts[1][0], pts[0][1]], pts[1], [pts[0][0], pts[1][1]]]) : 0 });
+  }
+  return hits.sort((x, y) => x.a - y.a)[0]?.o || null; // предпочитаем линии и меньшие полигоны
+}
+
+// ---------- мышь ----------
+C.addEventListener('mousedown', e => {
+  if (!frameSize) return;
+  const sp = scrPos(e);
+  if (e.button === 1 || (e.button === 0 && spaceDown)) { drag = { pan: true, x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy }; return e.preventDefault(); }
+  if (e.button !== 0) return;
+  if (tool === 'select') {
+    const hv = hitVertex(sp); if (hv) { snap(); drag = hv; return; }
+    const o = hitObject(sp); select(o ? o.id : -1); return;
+  }
+  addDraftPoint(sp);
+});
+C.addEventListener('mousemove', e => {
+  hover = scrPos(e);
+  if (frameSize) { const p = toImg(hover); $('#coords').textContent = `x, y: ${Math.round(p[0])}, ${Math.round(p[1])}`; }
+  if (drag?.pan) { view.ox = drag.ox + e.clientX - drag.x; view.oy = drag.oy + e.clientY - drag.y; }
+  else if (drag) drag.o.pts[drag.i] = clampPt(toImg(hover));
+  render();
+});
+window.addEventListener('mouseup', () => { if (drag && !drag.pan) commit(); drag = null; });
+C.addEventListener('mouseleave', () => { hover = null; render(); });
+C.addEventListener('dblclick', e => {
+  e.preventDefault();
+  if (draft && draft.pts.length > 1) draft.pts.pop(); // двойной клик добавил дубль последней вершины
+  finishDraft();
+});
+C.addEventListener('contextmenu', e => { e.preventDefault(); if (draft) { draft.pts.pop(); if (!draft.pts.length) draft = null; render(); } });
+C.addEventListener('wheel', e => {
+  if (!frameSize) return;
+  e.preventDefault();
+  const sp = scrPos(e), f = e.deltaY < 0 ? 1.15 : 1 / 1.15, ns = clamp(view.s * f, fitScale() * .5, 40);
+  view.ox = sp[0] - (sp[0] - view.ox) * ns / view.s; view.oy = sp[1] - (sp[1] - view.oy) * ns / view.s; view.s = ns;
+  render();
+}, { passive: false });
+new ResizeObserver(() => { fit(); render(); }).observe($('#wrap'));
+
+// ---------- клавиатура ----------
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') { if (e.code === 'Escape' || (e.code === 'Enter' && tag !== 'TEXTAREA')) document.activeElement.blur(); return; }
+  if (e.altKey || e.metaKey) return;
+  if (e.code === 'Space') spaceDown = true;
+  else if (e.ctrlKey && e.code === 'KeyZ') undo();
+  else if (e.ctrlKey) return;
+  else if (e.code === 'Enter') finishDraft();
+  else if (e.code === 'Escape') { if (draft) cancelDraft(); else select(-1); }
+  else if (e.code === 'Delete' || e.code === 'Backspace') deleteSel();
+  else if (e.code === 'Digit0') { fit(); render(); }
+  else { const t = TOOLS.find(t => t.code === e.code); if (!t) return; setTool(t.id); }
+  e.preventDefault(); e.stopPropagation();
+}, true);
+window.addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
+
+// ---------- отрисовка ----------
+function path(pts, closed) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (closed) ctx.closePath(); }
+function arrow(from, dir, color) {
+  const to = [from[0] + dir[0] * 44, from[1] + dir[1] * 44], a = Math.atan2(dir[1], dir[0]);
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3; ctx.setLineDash([]); ctx.globalAlpha = 1;
+  path([from, to]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(to[0], to[1]);
+  ctx.lineTo(to[0] - 12 * Math.cos(a - .45), to[1] - 12 * Math.sin(a - .45));
+  ctx.lineTo(to[0] - 12 * Math.cos(a + .45), to[1] - 12 * Math.sin(a + .45));
+  ctx.closePath(); ctx.fill();
+}
+function label(text, p, color) {
+  ctx.font = '12px system-ui'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 8;
+  ctx.globalAlpha = .85; ctx.fillStyle = '#000'; ctx.fillRect(p[0] - w / 2, p[1] - 9, w, 18);
+  ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.fillText(text, p[0] - w / 2 + 4, p[1]);
+}
+function drawObj(o, isSel) {
+  const L = LAYERS[o.layer], pts = o.pts.map(toScr);
+  ctx.strokeStyle = L.color; ctx.fillStyle = L.color; ctx.setLineDash([]); ctx.globalAlpha = alpha;
+  ctx.lineWidth = isSel ? 4 : L.kind === 'poly' ? 2 : 3;
+  if (L.kind === 'poly') { path(pts, true); ctx.globalAlpha = alpha * .25; ctx.fill(); ctx.globalAlpha = alpha; ctx.stroke(); }
+  else if (L.kind === 'rect') { const r = rectOf(pts); ctx.strokeRect(r[0], r[1], r[2], r[3]); }
+  else { path(pts, false); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  if (o.layer === 'lanes' && o.direction) arrow(centroid(pts), o.direction, L.color);
+  if (o.layer === 'stop_lines' && o.approach) arrow(mid(pts[0], pts[1]), o.approach, L.color);
+  let text = o.name;
+  if (o.layer === 'scale') text = `${dist(o.pts[0], o.pts[1]).toFixed(0)} px = ${o.meters || '?'} м`;
+  if (o.layer === 'signal') text = signalVisible ? 'signal' : 'signal (не виден)';
+  const anchor = L.kind === 'poly' ? centroid(pts) : L.kind === 'rect' ? [(pts[0][0] + pts[1][0]) / 2, Math.min(pts[0][1], pts[1][1]) - 12] : mid(pts[0], pts[pts.length - 1]);
+  label(text, o.layer === 'lanes' && o.direction ? [anchor[0], anchor[1] + 16] : anchor, L.color);
+  if (isSel) for (const p of pts) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.fillRect(p[0] - 4, p[1] - 4, 8, 8); ctx.strokeRect(p[0] - 4, p[1] - 4, 8, 8); }
+}
+function drawDraft() {
+  const color = draft.layer === 'dir' ? '#fff' : LAYERS[draft.layer].color, pts = draft.pts.map(toScr), k = draftKind();
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.globalAlpha = 1;
+  const all = hover && !drag ? [...pts, hover] : pts;
+  if (k === 'rect' && all.length === 2) { const r = rectOf(all); ctx.strokeRect(r[0], r[1], r[2], r[3]); }
+  else { path(all, k === 'poly' && all.length > 2); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.fillStyle = color;
+  for (const p of pts) ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6);
+}
+function drawLegend() {
+  const rows = Object.entries(LAYERS).filter(([k]) => layerVis[k] && objs.some(o => o.layer === k));
+  if (!rows.length) return;
+  ctx.globalAlpha = .8; ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 150, rows.length * 16 + 8); ctx.globalAlpha = 1;
+  ctx.font = '11px system-ui'; ctx.textBaseline = 'middle';
+  rows.forEach(([k, L], i) => { ctx.fillStyle = L.color; ctx.fillRect(14, 15 + i * 16, 10, 10); ctx.fillText(`${L.name} (${objs.filter(o => o.layer === k).length})`, 30, 20 + i * 16); });
+}
+function render() {
+  const dpr = devicePixelRatio || 1, W = C.clientWidth, H = C.clientHeight;
+  if (C.width !== W * dpr || C.height !== H * dpr) { C.width = W * dpr; C.height = H * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, W, H);
+  if (!frameSize) return;
+  const p0 = toScr([0, 0]);
+  if (frame) ctx.drawImage(frame, p0[0], p0[1], frameSize[0] * view.s, frameSize[1] * view.s);
+  else { ctx.fillStyle = '#22262d'; ctx.fillRect(p0[0], p0[1], frameSize[0] * view.s, frameSize[1] * view.s); }
+  for (const o of objs) if (layerVis[o.layer] && o.id !== selId) drawObj(o, false);
+  const s = sel(); if (s && layerVis[s.layer]) drawObj(s, true);
+  if (draft) drawDraft();
+  drawLegend();
+  $('#fsize').textContent = `кадр: ${frameSize[0]}×${frameSize[1]}`;
+  const ppm = pxPerMeter(); $('#ppm').textContent = `px/m: ${ppm ?? '—'}`;
+}
+
+// ---------- панели ----------
+function renderTools() {
+  $('#tools').innerHTML = TOOLS.map(t => `<div class="tool ${t.id === tool ? 'on' : ''}" data-id="${t.id}">${t.color ? `<span class="sw" style="background:${t.color}"></span>` : ''}${t.name}<kbd>${t.key}</kbd></div>`).join('');
+}
+$('#tools').onclick = e => { const d = e.target.closest('.tool'); if (d) setTool(d.dataset.id); };
+function renderLayers() {
+  let h = '';
+  for (const [k, L] of Object.entries(LAYERS)) {
+    const items = objs.filter(o => o.layer === k);
+    h += `<div class="lay"><label><input type="checkbox" data-vis="${k}" ${layerVis[k] ? 'checked' : ''}><span class="sw" style="background:${L.color}"></span>${L.name}</label><span class="muted">${items.length}</span></div>`;
+    for (const o of items) {
+      const warn = (o.layer === 'lanes' && !o.direction) ? 'без направления' : (o.layer === 'stop_lines' && !o.approach) ? 'без подхода' : (o.layer === 'scale' && !(o.meters > 0)) ? 'нет метров' : '';
+      h += `<div class="obj ${o.id === selId ? 'sel' : ''}" data-id="${o.id}">${esc(o.name)}${warn ? ` <span class="warn">${warn}</span>` : ''}</div>`;
+    }
+  }
+  $('#layers').innerHTML = h;
+}
+$('#layers').addEventListener('change', e => { const k = e.target.dataset.vis; if (k) { layerVis[k] = e.target.checked; render(); } });
+$('#layers').addEventListener('click', e => { const d = e.target.closest('.obj'); if (d) select(+d.dataset.id); });
+$('#opacity').oninput = e => { alpha = +e.target.value; render(); };
+$('#notes').addEventListener('change', save);
+const fmtVec = v => `[${v[0]}, ${v[1]}]`;
+function renderProps() {
+  const o = sel(), P = $('#propBody');
+  if (!o) { P.innerHTML = '<span class="muted">ничего не выбрано — выберите объект в списке или инструментом «Выбор» (V)</span>'; return; }
+  const L = LAYERS[o.layer];
+  let h = `<div class="prow"><span class="sw" style="background:${L.color}"></span>${L.name} · точек: ${o.pts.length}</div>`;
+  if (!L.single) h += `<label class="prow">имя <input id="pName" value="${esc(o.name)}"></label>`;
+  if (o.layer === 'lanes') h += `<div class="prow">разрешено: ${ALLOWED.map(([id, nm]) => `<label><input type="checkbox" data-al="${id}" ${o.allowed.includes(id) ? 'checked' : ''}>${nm}</label>`).join('')}</div>
+    <div class="prow">направление: ${o.direction ? fmtVec(o.direction) : '<span class="warn">не задано</span>'} <button data-a="dir">задать (D)</button></div>`;
+  if (o.layer === 'stop_lines') {
+    const lanes = objs.filter(x => x.layer === 'lanes');
+    h += `<div class="prow">подход: ${o.approach ? fmtVec(o.approach) : '<span class="warn">не задан</span>'} <button data-a="dir">задать (D)</button></div>
+      <div class="prow">полосы: ${lanes.length ? lanes.map(l => `<label><input type="checkbox" data-ln="${esc(l.name)}" ${o.lanes.includes(l.name) ? 'checked' : ''}>${esc(l.name)}</label>`).join('') : '<span class="muted">полос нет</span>'}</div>`;
+  }
+  if (o.layer === 'signal') h += `<label class="prow"><input type="checkbox" id="pVis" ${signalVisible ? 'checked' : ''}>светофор виден в кадре (roi экспортируется только если виден)</label>`;
+  if (o.layer === 'scale') h += `<label class="prow">расстояние, м <input id="pMeters" type="number" min="0" step="0.1" value="${o.meters || ''}"></label>`;
+  h += `<div class="prow"><button data-a="del">удалить (Del)</button></div>`;
+  P.innerHTML = h;
+}
+$('#propBody').addEventListener('change', e => {
+  const o = sel(), t = e.target; if (!o) return;
+  if (t.id === 'pName') return renameSel(t.value);
+  snap();
+  if (t.dataset.al) o.allowed = ALLOWED.map(a => a[0]).filter(id => id === t.dataset.al ? t.checked : o.allowed.includes(id));
+  else if (t.dataset.ln) o.lanes = t.checked ? [...o.lanes, t.dataset.ln] : o.lanes.filter(n => n !== t.dataset.ln);
+  else if (t.id === 'pVis') signalVisible = t.checked;
+  else if (t.id === 'pMeters') o.meters = +t.value || 0;
+  commit();
+});
+$('#propBody').addEventListener('click', e => {
+  const a = e.target.dataset.a; if (!a) return;
+  e.target.blur();
+  if (a === 'del') deleteSel(); else { setTool('dir'); setStatus('Два клика на кадре: откуда → куда'); }
+});
+
+// ---------- импорт / экспорт ----------
+function pxPerMeter() {
+  const sc = objs.find(o => o.layer === 'scale');
+  if (sc && sc.meters > 0) return Math.round(dist(sc.pts[0], sc.pts[1]) / sc.meters * 1000) / 1000;
+  return ppmImported;
+}
+function buildScene() {
+  const by = l => objs.filter(o => o.layer === l), one = l => by(l)[0];
+  const sig = one('signal');
+  return {
+    frame_size: frameSize,
+    px_per_meter: pxPerMeter(),
+    road: one('road')?.pts || [],
+    intersection: one('intersection')?.pts || null,
+    lanes: by('lanes').map(o => ({ name: o.name, polygon: o.pts, direction: o.direction, allowed: o.allowed })),
+    crosswalks: by('crosswalks').map(o => ({ name: o.name, polygon: o.pts })),
+    stop_lines: by('stop_lines').map(o => ({ name: o.name, p1: o.pts[0], p2: o.pts[1], approach: o.approach, lanes: o.lanes })),
+    solid_lines: by('solid_lines').map(o => ({ name: o.name, points: o.pts })),
+    signal: signalVisible && sig ? { visible: true, roi: rectOf(sig.pts) } : { visible: false, roi: null },
+    notes: $('#notes').value,
+  };
+}
+function exportWarnings() {
+  const w = [];
+  if (!frameSize) w.push('нет кадра (frame_size)');
+  if (!objs.some(o => o.layer === 'road')) w.push('нет полигона дороги');
+  const nd = objs.filter(o => o.layer === 'lanes' && !o.direction).length; if (nd) w.push(`полос без направления: ${nd}`);
+  const na = objs.filter(o => o.layer === 'stop_lines' && !o.approach).length; if (na) w.push(`стоп-линий без подхода: ${na}`);
+  return w;
+}
+function exportText() {
+  const w = exportWarnings();
+  setStatus(w.length ? 'Экспортировано с замечаниями: ' + w.join('; ') : 'scene.json готов', w.length > 0);
+  return JSON.stringify(buildScene(), null, 1);
+}
+$('#bDownload').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([exportText()], { type: 'application/json' }));
+  a.download = 'scene.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('#bCopy').onclick = () => {
+  const text = exportText();
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    if (!ok) setStatus('Буфер недоступен', true);
+  };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(fallback); else fallback();
+};
+function importScene(text) {
+  let d;
+  try { d = JSON.parse(text); } catch { return setStatus('Не удалось разобрать JSON', true); }
+  if (!d || typeof d !== 'object') return setStatus('Неверный формат scene.json', true);
+  snap(); objs = []; selId = -1; draft = null;
+  const pt = p => [Math.round(+p[0]), Math.round(+p[1])];
+  const push = (layer, pts, extra) => { if (Array.isArray(pts) && pts.length) objs.push({ id: nextId++, layer, name: layer, pts: pts.map(pt), ...extra }); };
+  push('road', d.road, {});
+  push('intersection', d.intersection, {});
+  for (const l of d.lanes || []) push('lanes', l.polygon, { name: l.name || autoName('lanes'), direction: l.direction || null, allowed: Array.isArray(l.allowed) ? l.allowed : [] });
+  for (const c of d.crosswalks || []) push('crosswalks', c.polygon, { name: c.name || autoName('crosswalks') });
+  for (const s of d.stop_lines || []) push('stop_lines', s.p1 && s.p2 ? [s.p1, s.p2] : null, { name: s.name || autoName('stop_lines'), approach: s.approach || null, lanes: Array.isArray(s.lanes) ? s.lanes : [] });
+  for (const s of d.solid_lines || []) push('solid_lines', s.points, { name: s.name || autoName('solid_lines') });
+  signalVisible = !!d.signal?.visible;
+  if (Array.isArray(d.signal?.roi) && d.signal.roi.length === 4) { const [x, y, w, h] = d.signal.roi.map(Number); push('signal', [[x, y], [x + w, y + h]], {}); }
+  ppmImported = typeof d.px_per_meter === 'number' ? d.px_per_meter : null;
+  $('#notes').value = d.notes || '';
+  if (Array.isArray(d.frame_size) && d.frame_size.length === 2) {
+    if (!frameSize) { frameSize = [+d.frame_size[0], +d.frame_size[1]]; $('#hint').hidden = true; fit(); }
+    else if (frameSize[0] !== +d.frame_size[0] || frameSize[1] !== +d.frame_size[1]) setStatus(`frame_size в файле ${d.frame_size} ≠ текущему кадру ${frameSize}`, true);
+  }
+  commit();
+  if (!$('#status').classList.contains('err')) setStatus(`Импортировано объектов: ${objs.length}`);
+}
+$('#bClear').onclick = () => {
+  if (!objs.length || !confirm('Удалить все объекты сцены?')) return;
+  snap(); objs = []; selId = -1; draft = null; ppmImported = null; commit(); setStatus('Сцена очищена');
+};
+
+// ---------- файлы ----------
+$('#bVideo').onclick = () => $('#fVideo').click();
+$('#bImage').onclick = () => $('#fImage').click();
+$('#bImport').onclick = () => $('#fJson').click();
+$('#fVideo').onchange = e => { if (e.target.files[0]) loadVideo(e.target.files[0]); e.target.value = ''; };
+$('#fImage').onchange = e => { if (e.target.files[0]) loadImage(e.target.files[0]); e.target.value = ''; };
+$('#fJson').onchange = e => { if (e.target.files[0]) e.target.files[0].text().then(importScene); e.target.value = ''; };
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  for (const f of e.dataTransfer.files) {
+    if (/\.json$/i.test(f.name)) f.text().then(importScene);
+    else if (f.type.startsWith('image/')) loadImage(f);
+    else if (f.type.startsWith('video/') || /\.(mp4|mov|mkv|webm)$/i.test(f.name)) loadVideo(f);
+  }
+});
+
+restore();
+if (frameSize) $('#hint').hidden = true;
+renderTools(); commit();
+</script>
+</body>
+</html>

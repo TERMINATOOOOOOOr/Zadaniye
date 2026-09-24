@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}EDA — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>EDA: video breakdown</h1>
+<p class="muted">Per-video statistics from <code>site/static/eda/eda.json</code>: capture parameters, object counts over time, heatmaps.</p>
+
+{% if error %}
+<p class="note warn">eda.json could not be read: {{ error }}</p>
+{% elif not present %}
+<div class="note empty">
+  <h3>Data will appear after the run</h3>
+  <p>The EDA script writes <code>eda.json</code> and images into <code>site/static/eda/</code>; this page picks them up without code changes.</p>
+</div>
+{% elif not videos %}
+<p class="note">eda.json contains no videos yet.</p>
+{% endif %}
+
+{% for v in videos %}
+<section class="card block">
+  <h2>{{ v.get('name') or ('video ' ~ loop.index) }}</h2>
+  <div class="table-scroll">
+    <table class="stats">
+      <thead><tr><th>resolution</th><th>fps</th><th>duration</th><th>frames</th></tr></thead>
+      <tbody><tr>
+        <td>{{ v.get('width', '—') }}×{{ v.get('height', '—') }}</td>
+        <td>{{ '%.2f'|format(v.get('fps') or 0) }}</td>
+        <td>{{ v.get('duration')|fmt_time }} ({{ '%.1f'|format(v.get('duration') or 0) }} s)</td>
+        <td>{{ v.get('n_frames', '—') }}</td>
+      </tr></tbody>
+    </table>
+  </div>
+  {% if v.series_names %}
+  <h3>Object counts over time</h3>
+  <p class="muted small">Series: {{ v.series_names|join(', ') }}. Hover to see values.</p>
+  <div class="chart-box"><canvas class="chart" data-eda-chart="{{ loop.index0 }}" height="240"></canvas></div>
+  {% endif %}
+  {% if v.images %}
+  <h3>Maps</h3>
+  <div class="gallery">
+    {% for key, url in v.images.items() %}
+    <figure><img src="{{ url }}" alt="{{ key }} — {{ v.get('name') }}" loading="lazy"><figcaption>{{ key }}</figcaption></figure>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+
+<script type="application/json" id="eda-data">{{ videos|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/eda.js"></script>
+{% endblock %}

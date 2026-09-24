@@ -1,0 +1,5 @@
+# Зависимости сайта. ML-зависимости пайплайна — в requirements.txt в корне репозитория.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1
+python-multipart>=0.0.9

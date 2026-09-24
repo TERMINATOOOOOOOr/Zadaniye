@@ -1,0 +1,9 @@
+.venv/
+venv/
+data/
+out/
+site/jobs_store/
+**/__pycache__/
+*.mp4
+*.MP4
+.git/

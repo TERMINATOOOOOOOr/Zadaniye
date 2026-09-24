@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Team — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Team</h1>
+<p class="muted">{{ site.team }}. Data comes from <code>site/content/team.json</code>.</p>
+{% if error %}<p class="note warn">team.json could not be read: {{ error }}</p>{% endif %}
+{% if not members %}<p class="note">The member list is empty — fill in <code>site/content/team.json</code>.</p>{% endif %}
+<div class="grid cards team">
+  {% for m in members %}
+  <article class="card member">
+    <div class="member-head">
+      <div class="avatar" aria-hidden="true">{{ (m.get('name') or '?')[:1] }}</div>
+      <div>
+        <h3>{{ m.get('name') or 'Unnamed' }}</h3>
+        <p class="role">{{ m.get('role') or '' }}</p>
+      </div>
+    </div>
+    {% if m.get('contributions') %}
+    <h4>Contributions</h4>
+    <ul class="tight">{% for c in m['contributions'] %}<li>{{ c }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if m.get('past_projects') %}
+    <h4>Past projects</h4>
+    <ul class="tight">{% for p in m['past_projects'] %}
+      <li>{% if p is mapping %}{% if p.get('url') %}<a href="{{ p['url'] }}" rel="noopener" target="_blank">{{ p.get('name') or p['url'] }}</a>{% else %}{{ p.get('name') }}{% endif %}{% if p.get('note') %} — {{ p['note'] }}{% endif %}{% else %}{{ p }}{% endif %}</li>
+    {% endfor %}</ul>
+    {% endif %}
+    <div class="links-row">
+      {% if m.get('github') %}<a class="pill" href="{{ m['github'] }}" rel="noopener" target="_blank">GitHub</a>{% endif %}
+      {% if m.get('linkedin') %}<a class="pill" href="{{ m['linkedin'] }}" rel="noopener" target="_blank">LinkedIn</a>{% endif %}
+      {% if m.get('portfolio') %}<a class="pill" href="{{ m['portfolio'] }}" rel="noopener" target="_blank">Portfolio</a>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

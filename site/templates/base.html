@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ site.name }} — {{ site.tagline }}{% endblock %}</title>
+<meta name="description" content="{{ site.tagline }}">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/site.css">
+<style>:root{ {% for id, info in class_info.items() %}--c-{{ id }}:{{ info.color }};{% endfor %} }</style>
+<script>window.TE_CLASSES = {{ class_info|tojson }};</script>
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/" aria-label="{{ site.name }}">
+      <svg viewBox="0 0 64 64" width="26" height="26" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1a2130"/><path d="M8 32c6-11 14-16 24-16s18 5 24 16c-6 11-14 16-24 16S14 43 8 32z" fill="none" stroke="#5b9cff" stroke-width="4"/><circle cx="32" cy="32" r="8" fill="#5b9cff"/><circle cx="35" cy="29" r="2.5" fill="#1a2130"/></svg>
+      <span>{{ site.name }}</span>
+    </a>
+    <input type="checkbox" id="nav-toggle" class="nav-toggle">
+    <label for="nav-toggle" class="nav-burger" aria-label="Menu"><span></span><span></span><span></span></label>
+    <nav class="nav" aria-label="Sections">
+      {% for href, label in nav %}<a href="{{ href }}"{% if active == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    </nav>
+  </div>
+</header>
+<main class="wrap main">
+{% block content %}{% endblock %}
+</main>
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <span>{{ site.team }} · {{ site.name }} · {{ year }}</span>
+    <span><a href="{{ site.repo }}" rel="noopener" target="_blank">repository</a> · <a href="/healthz">healthz</a></span>
+  </div>
+</footer>
+<script src="/static/js/classes.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Hackathon · computer vision · fixed road camera</p>
+  <h1>{{ site.name }}</h1>
+  <p class="lead">{{ site.name }} watches footage from a fixed road camera and finds traffic events in it:
+    accidents and near misses, red-light running, wrong-way driving, prohibited U-turns and turns,
+    vehicles stopped on the carriageway, jaywalking pedestrians, congestion, obstacles and smoke. Every event
+    comes back as a time segment with one of 14 classes, and in parallel each frame gets a probability that an
+    accident starts within the next 5 seconds. The object detector is learned; the event rules themselves are
+    transparent and tunable.</p>
+  <div class="actions">
+    <a class="btn primary" href="/demo">Try the demo</a>
+    <a class="btn" href="/results">Results</a>
+    <a class="btn" href="/approach">How it works</a>
+  </div>
+</section>
+
+<section class="grid cards">
+  <a class="card link-card" href="/team"><h3>Team</h3><p>Who did what, profile links and past projects.</p></a>
+  <a class="card link-card" href="/approach"><h3>Approach</h3><p>Pipeline: detector → tracker → scene geometry → per-class rules → events.</p></a>
+  <a class="card link-card" href="/eda"><h3>EDA</h3><p>Video breakdown: resolution, fps, object density over time, heatmaps.</p></a>
+  <a class="card link-card" href="/results"><h3>Results</h3><p>Annotated clips, event timeline, risk curve and honest failures.</p></a>
+  <a class="card link-card" href="/demo"><h3>Demo</h3><p>Upload your own .mp4 (up to 2 minutes) and see what the pipeline finds.</p></a>
+  <a class="card link-card" href="/report"><h3>Report</h3><p>What worked, what did not, and what comes next.</p></a>
+</section>
+
+<section>
+  <h2>Event classes</h2>
+  <p class="muted">Class ids are the official ones; each class keeps the same colour on every page.</p>
+  <div class="chips">
+    {% for id, info in class_info.items() %}<span class="badge" style="--c: {{ info.color }}" title="{{ info.desc }}">{{ id }}</span>{% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Stand status</h2>
+  <ul class="status-list">
+    <li><span class="dot {{ 'ok' if avail.solution else 'no' }}"></span> <code>solution.py</code> — {{ 'available' if avail.solution else 'not connected yet' }}</li>
+    <li><span class="dot {{ 'ok' if avail.render else 'no' }}"></span> <code>src/render.py</code> (video annotation) — {{ 'available' if avail.render else 'not connected yet' }}</li>
+    <li><span class="dot {{ 'ok' if avail.cv2 else 'no' }}"></span> OpenCV — {{ 'installed' if avail.cv2 else 'not installed' }}</li>
+    <li><span class="dot {{ 'ok' if has_results else 'no' }}"></span> pipeline results — {{ 'published' if has_results else 'will appear after the run' }}</li>
+    <li><span class="dot {{ 'ok' if has_eda else 'no' }}"></span> EDA data — {{ 'published' if has_eda else 'will appear after the run' }}</li>
+  </ul>
+</section>
+{% endblock %}

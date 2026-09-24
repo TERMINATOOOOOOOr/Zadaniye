@@ -1,0 +1,8 @@
+# временные файлы задач демо
+jobs_store/
+__pycache__/
+*.py[cod]
+
+# NOTE: the root .gitignore ignores *.mp4 everywhere EXCEPT site/static/media/*.mp4,
+# so annotated clips for the Results page belong in site/static/media/<name>_annotated.mp4.
+# (results.json, examples/*.jpg and eda/* are not affected by that rule.)

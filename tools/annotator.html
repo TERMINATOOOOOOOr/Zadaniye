@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Разметка событий</title>
+<style>
+:root{--bg:#111316;--panel:#191c21;--panel2:#20242b;--line:#2c313a;--text:#e7e9ec;--muted:#8a919e;--accent:#4f8cff;--danger:#ff5252;--ok:#3ddc84}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.35 system-ui,"Segoe UI",Roboto,sans-serif;display:grid;grid-template-rows:44px minmax(0,1fr);grid-template-columns:290px minmax(0,1fr);height:100vh;overflow:hidden}
+button,select,input{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:3px 8px}
+button{cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+input[type=number]{width:70px;padding:2px 4px;text-align:right}
+kbd{display:inline-block;min-width:18px;padding:0 4px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;background:#0d0f12;font:11px/16px ui-monospace,Consolas,monospace;text-align:center;color:var(--muted)}
+header{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
+header h1{font-size:14px;margin:0 8px 0 0;font-weight:600;white-space:nowrap}
+#status{margin-left:auto;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#status.err{color:var(--danger)}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:10px}
+section h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+#videos:empty::before{content:"пусто";color:var(--muted)}
+#videos div{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;cursor:pointer}
+#videos div.cur{background:var(--panel2);outline:1px solid var(--accent)}
+#videos .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#videos .cnt{color:var(--muted)}
+#videos .x{padding:0 5px;font-size:10px;color:var(--muted)}
+.pal{display:grid;grid-template-columns:22px 10px 1fr auto auto;align-items:center;gap:4px;padding:1px 0}
+.pal .sw{width:10px;height:10px;border-radius:2px}
+.pal .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.pal button{padding:0 5px;font-size:11px}
+.pal.open .nm{color:var(--ok)}
+.pal.open .b2{border-color:var(--ok);color:var(--ok)}
+details{border:1px solid var(--line);border-radius:4px;padding:6px}
+summary{cursor:pointer;color:var(--muted);font-size:12px}
+.conv{margin:6px 0 0;padding:0;list-style:none;font-size:11.5px}
+.conv li{padding:3px 0;border-top:1px solid var(--line)}
+.conv b{font-weight:600}
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#stage{flex:1;min-height:120px;background:#000;position:relative}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;outline:none}
+#drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);pointer-events:none}
+#drop[hidden],#fpsEst[hidden],#bFix[hidden]{display:none}
+#ctrl{display:flex;align-items:center;gap:10px;padding:5px 10px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+#time{font:13px ui-monospace,Consolas,monospace;min-width:250px}
+#open{color:var(--ok);font-size:12px}
+#tlwrap{position:relative;background:var(--panel);border-top:1px solid var(--line);padding:4px 10px 6px}
+#tl{display:block;width:100%;cursor:crosshair}
+#tip{position:absolute;pointer-events:none;background:#000d;border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:11px;white-space:nowrap;display:none;z-index:3}
+#valbar{display:flex;gap:10px;align-items:center;padding:4px 10px;font-size:12px;color:var(--muted);background:var(--panel2);border-top:1px solid var(--line)}
+#valbar.bad{color:var(--danger)}
+#valbar .sp{flex:1}
+#events{height:200px;min-height:70px;max-height:60vh;resize:vertical;overflow:auto;background:var(--panel);border-top:1px solid var(--line)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:2px 6px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--panel2);font-weight:500;color:var(--muted);font-size:11px;z-index:1}
+tr.sel td{background:#2a3242}
+tr.bad td{background:#3a1d1d}
+tr.bad input{border-color:var(--danger)}
+td .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+td button{padding:0 6px;font-size:11px;margin-right:2px}
+td .err{color:var(--danger);font-size:11px;margin-left:6px}
+</style>
+</head>
+<body>
+<header>
+ <h1>Разметка событий</h1>
+ <button id="bLoad">Видео…</button>
+ <button id="bImport">Импорт JSON…</button>
+ <button id="bDownload" class="primary" disabled>Скачать my_labels.json</button>
+ <button id="bCopy" disabled>Скопировать в буфер</button>
+ <span id="status">Загрузите видео или перетащите файлы (.mp4 / .json) в окно</span>
+ <input id="fVideo" type="file" accept="video/*,.mp4,.MP4" multiple hidden>
+ <input id="fJson" type="file" accept=".json,application/json" hidden>
+</header>
+<aside>
+ <section><h2>Видео</h2><div id="videos"></div></section>
+ <section><h2>Классы · клавиша = открыть / закрыть</h2><div id="palette"></div></section>
+ <details><summary>Конвенции границ (начало → конец)</summary><ul class="conv" id="conv"></ul></details>
+ <details><summary>Горячие клавиши</summary>
+  <ul class="conv">
+   <li><kbd>Space</kbd> play / pause</li>
+   <li><kbd>←</kbd><kbd>→</kbd> кадр · <kbd>Shift</kbd> 1 с · <kbd>Ctrl</kbd> 5 с</li>
+   <li><kbd>J</kbd> / <kbd>L</kbd> −10 / +10 с · <kbd>Home</kbd> / <kbd>End</kbd></li>
+   <li><kbd>1</kbd>…<kbd>0</kbd> <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> открыть / закрыть класс</li>
+   <li><kbd>Enter</kbd> закрыть последний открытый · <kbd>Esc</kbd> отменить его</li>
+   <li><kbd>↑</kbd><kbd>↓</kbd> выбор в списке · <kbd>Backspace</kbd> / <kbd>Del</kbd> удалить</li>
+  </ul>
+ </details>
+</aside>
+<main>
+ <div id="stage"><video id="video" controls preload="metadata" tabindex="-1"></video><div id="drop">нет видео</div></div>
+ <div id="ctrl">
+  <button id="bPlay" title="Space">▶</button>
+  <select id="rate" title="скорость"><option>0.25</option><option>0.5</option><option selected>1</option><option>1.5</option><option>2</option><option>3</option><option>4</option></select>
+  <span id="time">—</span>
+  <label>fps <input id="fps" type="number" min="1" max="240" step="0.001" value="25"></label>
+  <span id="fpsEst" hidden>≈ <span id="fpsEstVal"></span> <button id="bApplyFps">применить</button></span>
+  <span id="open"></span>
+ </div>
+ <div id="tlwrap"><canvas id="tl" height="44"></canvas><div id="tip"></div></div>
+ <div id="valbar"><span id="valmsg">Событий: 0</span><button id="bFix" hidden>Обрезать по соседям</button><span class="sp"></span><button id="bSort" title="порядок по началу">по началу ↑</button></div>
+ <div id="events"><table><thead><tr><th>#</th><th>класс</th><th>начало, с</th><th>конец, с</th><th>длит.</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+</main>
+<script>
+'use strict';
+// ---------- справочник классов: клавиша, id, цвет, правило границ ----------
+const CLASSES = [
+ { key: '1', id: 'accident',            color: '#ff3b3b', rule: 'первый контакт → все объекты остановились или уехали' },
+ { key: '2', id: 'near_miss',           color: '#ff8c00', rule: 'начало манёвра уклонения → участники разошлись' },
+ { key: '3', id: 'red_light',           color: '#ffd600', rule: 'передок пересёк стоп-линию на красный → покинул перекрёсток / кадр' },
+ { key: '4', id: 'wrong_way',           color: '#8c5cff', rule: 'въезд на встречную полосу → вернулся / уехал' },
+ { key: '5', id: 'illegal_u_turn',      color: '#ff5fa2', rule: 'начало разворота → разворот завершён' },
+ { key: '6', id: 'stopped_vehicle',     color: '#40c4ff', rule: 'остановился (≥10 с, не в очереди у светофора) → поехал / убран' },
+ { key: '7', id: 'jaywalking',          color: '#00e676', rule: 'шаг на проезжую часть → покинул дорогу' },
+ { key: '8', id: 'failure_to_yield',    color: '#d500f9', rule: 'авто въезжает на переход с пешеходом → покинул переход' },
+ { key: '9', id: 'illegal_turn',        color: '#c6ff00', rule: 'начало поворота → поворот завершён' },
+ { key: '0', id: 'solid_line_crossing', color: '#00e5d4', rule: 'колесо пересекло линию → полностью в новой полосе' },
+ { key: 'Q', id: 'stop_line',           color: '#ffab91', rule: 'остановился за стоп-линией на красный → зелёный сигнал' },
+ { key: 'W', id: 'congestion',          color: '#a1887f', rule: 'очередь остановилась → рассосалась' },
+ { key: 'E', id: 'road_obstacle',       color: '#3d5afe', rule: 'препятствие появилось → убрано' },
+ { key: 'R', id: 'fire_smoke',          color: '#bdbdbd', rule: 'первый дым → рассеялся / конец видео' },
+];
+const CLS = Object.fromEntries(CLASSES.map(c => [c.id, c]));
+const CODE2CLS = Object.fromEntries(CLASSES.map(c => [(/\d/.test(c.key) ? 'Digit' : 'Key') + c.key, c.id]));
+const STD_FPS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+
+const $ = s => document.querySelector(s);
+const r2 = x => Math.round(x * 100) / 100;
+const f2 = x => x.toFixed(2);
+const esc = s => s.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const V = $('#video');
+const TL = $('#tl'), tctx = TL.getContext('2d');
+
+// ---------- состояние ----------
+const videos = [];   // {name,url,fps,duration,t,events:[{id,s,e,label}],open:[{label,s}],est,probing}
+let cur = -1;        // индекс текущего видео
+let selected = -1;   // id выбранного события
+let sortDesc = false;
+let nextId = 1;
+let tlDirty = true, lastT = -1, dragging = false;
+let tlRows = [];     // строки таймлайна: {label,y,h}
+const cv = () => videos[cur];
+const evById = id => cv().events.find(e => e.id === +id);
+
+// ---------- localStorage: по имени файла ----------
+const skey = name => 'annot:' + name;
+function loadStore(name) { try { return JSON.parse(localStorage.getItem(skey(name))); } catch { return null; } }
+function saveStore(v) { localStorage.setItem(skey(v.name), JSON.stringify({ fps: v.fps, events: v.events.map(e => [e.s, e.e, e.label]) })); }
+
+function setStatus(msg, err) { const s = $('#status'); s.textContent = msg; s.classList.toggle('err', !!err); }
+
+// ---------- загрузка файлов ----------
+function addFiles(files) {
+  let added = 0;
+  for (const f of files) {
+    if (/\.json$/i.test(f.name)) { f.text().then(importJSON); continue; }
+    if (!(f.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi)$/i.test(f.name))) continue;
+    if (videos.some(v => v.name === f.name)) continue;
+    const st = loadStore(f.name);
+    videos.push({
+      name: f.name, url: URL.createObjectURL(f), fps: st?.fps || 25, duration: null, t: 0, open: [], est: null, probing: false,
+      events: (st?.events || []).map(([s, e, label]) => ({ id: nextId++, s, e, label })),
+    });
+    probeDuration(videos[videos.length - 1]);
+    added++;
+  }
+  if (added && cur < 0) selectVideo(0);
+  if (added) setStatus(`Загружено видео: ${added}`);
+  refresh();
+}
+
+// длительность узнаём заранее для всех видео (нужна для экспорта и проверки границ)
+function probeDuration(v) {
+  const p = document.createElement('video');
+  p.preload = 'metadata'; p.src = v.url;
+  p.onloadedmetadata = () => { v.duration = p.duration; p.removeAttribute('src'); p.load(); refresh(); };
+}
+
+function selectVideo(i) {
+  if (cur >= 0) cv().t = V.currentTime;
+  cur = i; selected = -1;
+  const v = cv();
+  V.src = v.url;
+  $('#fps').value = v.fps;
+  $('#drop').hidden = true;
+  updateFpsEst();
+  refresh();
+}
+V.addEventListener('loadedmetadata', () => {
+  const v = cv(); if (!v) return;
+  v.duration = V.duration;
+  V.playbackRate = V.defaultPlaybackRate = +$('#rate').value;
+  if (v.t) V.currentTime = v.t;
+  refresh();
+});
+V.addEventListener('focus', () => V.blur()); // клавиши обрабатываем сами, а не нативными контролами
+['play', 'pause', 'ended'].forEach(ev => V.addEventListener(ev, () => { tlDirty = true; }));
+V.addEventListener('play', () => probeFps(cv()));
+
+// ---------- оценка fps по реальным кадрам ----------
+function probeFps(v) {
+  if (!v || v.est || v.probing) return;
+  v.probing = true;
+  const done = fps => {
+    v.probing = false;
+    if (!(fps > 1) || cv() !== v) return;
+    const std = STD_FPS.find(s => Math.abs(s - fps) / s < 0.02);
+    v.est = std || Math.round(fps * 100) / 100;
+    updateFpsEst();
+  };
+  if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+    const deltas = []; let last = null;
+    const step = (_, m) => {
+      if (cv() !== v) return done(0);
+      if (last !== null && m.mediaTime > last) deltas.push(m.mediaTime - last);
+      last = m.mediaTime;
+      if (deltas.length < 60) return V.requestVideoFrameCallback(step);
+      deltas.sort((a, b) => a - b);
+      done(1 / deltas[Math.floor(deltas.length * 0.25)]); // нижний квартиль — устойчив к пропущенным кадрам
+    };
+    V.requestVideoFrameCallback(step);
+  } else if (V.getVideoPlaybackQuality) {
+    const q0 = V.getVideoPlaybackQuality().totalVideoFrames, t0 = V.currentTime;
+    setTimeout(() => {
+      const dt = V.currentTime - t0;
+      done(dt > 1 && !V.paused ? (V.getVideoPlaybackQuality().totalVideoFrames - q0) / dt : 0);
+    }, 4000);
+  } else v.probing = false;
+}
+function updateFpsEst() {
+  const v = cv();
+  $('#fpsEst').hidden = !(v && v.est && Math.abs(v.est - v.fps) > 0.01);
+  if (v && v.est) $('#fpsEstVal').textContent = v.est;
+}
+$('#bApplyFps').onclick = () => { const v = cv(); v.fps = v.est; $('#fps').value = v.fps; commit(); updateFpsEst(); };
+$('#fps').addEventListener('change', e => { const v = cv(); if (!v) return; v.fps = +e.target.value > 0 ? +e.target.value : 25; e.target.value = v.fps; commit(); updateFpsEst(); });
+
+// ---------- навигация по времени ----------
+function seek(t) {
+  const v = cv(); if (!v) return;
+  const d = v.duration || V.duration || 0;
+  V.currentTime = Math.min(Math.max(0, t), d || t);
+}
+function stepFrames(n) {
+  const v = cv(); if (!v) return;
+  V.pause();
+  const fr = Math.round(V.currentTime * v.fps);
+  seek((fr + n) / v.fps + 1e-4); // малый сдвиг, чтобы попасть внутрь кадра, а не на границу
+}
+function togglePlay() { if (cur < 0) return; V.paused ? V.play().catch(() => {}) : V.pause(); }
+
+// ---------- сегменты ----------
+function openSeg(label) {
+  const v = cv(); if (!v) return;
+  if (v.open.some(o => o.label === label)) return closeSeg(label);
+  v.open.push({ label, s: r2(V.currentTime) });
+  refresh();
+}
+function closeSeg(label) {
+  const v = cv(); if (!v) return;
+  const i = label ? v.open.findIndex(o => o.label === label) : v.open.length - 1;
+  if (i < 0) return setStatus(label ? `${label}: сегмент не открыт` : 'Нет открытых сегментов', true);
+  const o = v.open[i], e = r2(V.currentTime);
+  if (e <= o.s) return setStatus(`${o.label}: конец должен быть позже начала ${f2(o.s)}`, true);
+  v.open.splice(i, 1);
+  const ev = { id: nextId++, s: o.s, e, label: o.label };
+  v.events.push(ev); selected = ev.id;
+  setStatus(`${ev.label}: ${f2(ev.s)} – ${f2(ev.e)}`);
+  commit();
+}
+function cancelSeg() { const v = cv(); if (v && v.open.length) { setStatus(`Отменён ${v.open.pop().label}`); refresh(); } }
+function deleteSelected() {
+  const v = cv(); const i = v ? v.events.findIndex(e => e.id === selected) : -1;
+  if (i < 0) return;
+  v.events.splice(i, 1); selected = -1; commit();
+}
+function moveSelection(d) {
+  const rows = sortedEvents(); if (!rows.length) return;
+  const i = rows.findIndex(e => e.id === selected);
+  setSelected(rows[Math.min(rows.length - 1, Math.max(0, i + d))].id, true);
+}
+function setSelected(id, scroll) {
+  selected = id; tlDirty = true;
+  for (const tr of $('#tbody').children) {
+    const on = +tr.dataset.id === id;
+    tr.classList.toggle('sel', on);
+    if (on && scroll) tr.scrollIntoView({ block: 'nearest' });
+  }
+}
+function clearVideo(i) {
+  const v = videos[i];
+  if (!confirm(`Удалить всю разметку для ${v.name}?`)) return;
+  v.events = []; v.open = []; selected = -1;
+  localStorage.removeItem(skey(v.name));
+  refresh();
+}
+
+// ---------- проверка ----------
+function validate(v) {
+  const errs = new Map(); // id → текст ошибки
+  const add = (ev, m) => errs.set(ev.id, errs.has(ev.id) ? errs.get(ev.id) + '; ' + m : m);
+  for (const a of v.events) {
+    if (!(a.s < a.e)) add(a, 'начало ≥ конца');
+    if (v.duration != null && a.e > v.duration + 1e-6) add(a, 'конец > длительности');
+    if (v.events.some(b => a !== b && a.label === b.label && a.s < b.e && b.s < a.e)) add(a, 'пересечение');
+  }
+  return errs;
+}
+// автоисправление: конец ограничиваем длительностью, пересечения одного класса режем по началу соседа
+function autoFix(v) {
+  v.events.sort((a, b) => a.s - b.s || a.e - b.e);
+  const last = {};
+  for (const ev of v.events) {
+    if (v.duration != null) ev.e = Math.min(ev.e, Math.floor(v.duration * 100) / 100);
+    const p = last[ev.label];
+    if (p && p.e > ev.s) p.e = ev.s;
+    last[ev.label] = ev;
+  }
+  const n = v.events.length;
+  v.events = v.events.filter(ev => ev.s < ev.e);
+  return n - v.events.length;
+}
+$('#bFix').onclick = () => {
+  let removed = 0;
+  for (const v of videos) { removed += autoFix(v); saveStore(v); }
+  setStatus(`Обрезано по соседям${removed ? `, удалено пустых: ${removed}` : ''}`);
+  refresh();
+};
+
+// ---------- отрисовка панелей ----------
+function refresh() {
+  const v = cv();
+  if (v) { v.events.sort((a, b) => a.s - b.s || a.e - b.e); }
+  renderList(); renderPalette(); renderTable(); updateVal(); updateTime();
+  tlDirty = true;
+}
+function commit() { const v = cv(); if (v) saveStore(v); refresh(); }
+
+function renderList() {
+  const L = $('#videos'); L.innerHTML = '';
+  videos.forEach((v, i) => {
+    const d = document.createElement('div');
+    d.className = i === cur ? 'cur' : '';
+    d.innerHTML = `<span class="name" title="${esc(v.name)}">${esc(v.name)}</span><span class="cnt">${v.events.length}${v.open.length ? ' +' + v.open.length : ''}</span><button class="x" title="Очистить разметку этого видео">очистить</button>`;
+    d.onclick = e => { if (e.target.tagName === 'BUTTON') clearVideo(i); else if (i !== cur) selectVideo(i); };
+    L.appendChild(d);
+  });
+}
+function renderPalette() {
+  const P = $('#palette'), v = cv();
+  if (!P.children.length) for (const c of CLASSES) {
+    const d = document.createElement('div'); d.className = 'pal'; d.dataset.id = c.id;
+    d.innerHTML = `<kbd>${c.key}</kbd><span class="sw" style="background:${c.color}"></span><span class="nm" title="${c.rule}">${c.id}</span><button data-a="open">Начать</button><button data-a="close" class="b2">Закончить</button>`;
+    P.appendChild(d);
+  }
+  for (const d of P.children) d.classList.toggle('open', !!v && v.open.some(o => o.label === d.dataset.id));
+}
+$('#palette').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  b.blur();
+  const label = b.parentElement.dataset.id;
+  if (b.dataset.a === 'open') { if (cv() && !cv().open.some(o => o.label === label)) openSeg(label); }
+  else closeSeg(label);
+});
+$('#conv').innerHTML = CLASSES.map(c => `<li><b style="color:${c.color}">${c.id}</b>: ${c.rule}</li>`).join('');
+
+function sortedEvents() { const v = cv(); return v ? v.events.slice().sort((a, b) => (a.s - b.s || a.e - b.e) * (sortDesc ? -1 : 1)) : []; }
+function renderTable() {
+  const v = cv(), tb = $('#tbody');
+  const focus = document.activeElement?.closest?.('#tbody tr') ? { id: document.activeElement.closest('tr').dataset.id, f: document.activeElement.dataset.f } : null;
+  tb.innerHTML = '';
+  if (!v) return;
+  const errs = validate(v);
+  sortedEvents().forEach((ev, i) => {
+    const tr = document.createElement('tr'); tr.dataset.id = ev.id;
+    tr.className = (ev.id === selected ? 'sel ' : '') + (errs.has(ev.id) ? 'bad' : '');
+    tr.innerHTML = `<td>${i + 1}</td><td><span class="dot" style="background:${CLS[ev.label].color}"></span>${ev.label}</td>
+     <td><input type="number" step="0.01" min="0" value="${f2(ev.s)}" data-f="s"></td>
+     <td><input type="number" step="0.01" min="0" value="${f2(ev.e)}" data-f="e"></td>
+     <td>${f2(ev.e - ev.s)}</td>
+     <td><button data-a="s" title="перейти к началу">к началу</button><button data-a="e" title="перейти к концу">к концу</button><button data-a="d" title="Backspace / Del">удалить</button><span class="err">${errs.get(ev.id) || ''}</span></td>`;
+    tb.appendChild(tr);
+  });
+  if (focus) tb.querySelector(`tr[data-id="${focus.id}"] input[data-f="${focus.f}"]`)?.focus();
+}
+$('#tbody').addEventListener('click', e => {
+  const tr = e.target.closest('tr'); if (!tr) return;
+  const ev = evById(tr.dataset.id); if (!ev) return;
+  setSelected(ev.id, false);
+  const a = e.target.dataset.a;
+  if (a === 's') seek(ev.s); else if (a === 'e') seek(ev.e); else if (a === 'd') deleteSelected();
+  if (a) e.target.blur();
+});
+$('#tbody').addEventListener('change', e => {
+  const inp = e.target; if (inp.tagName !== 'INPUT') return;
+  const ev = evById(inp.closest('tr').dataset.id);
+  ev[inp.dataset.f] = r2(Math.max(0, +inp.value || 0));
+  commit();
+});
+$('#bSort').onclick = () => { sortDesc = !sortDesc; $('#bSort').textContent = sortDesc ? 'по началу ↓' : 'по началу ↑'; renderTable(); };
+
+function updateVal() {
+  let nErr = 0, nEv = 0, noDur = 0;
+  for (const v of videos) { nErr += validate(v).size; nEv += v.events.length; if (v.duration == null) noDur++; }
+  const bar = $('#valbar'); bar.classList.toggle('bad', nErr > 0);
+  $('#valmsg').textContent = nErr ? `Ошибок: ${nErr} — экспорт заблокирован` : `Событий: ${nEv} · видео: ${videos.length}${noDur ? ` · ждём метаданные: ${noDur}` : ''}`;
+  $('#bFix').hidden = !nErr;
+  $('#bDownload').disabled = $('#bCopy').disabled = nErr > 0 || !videos.length || noDur > 0;
+}
+function updateTime() {
+  const v = cv(), t = V.currentTime || 0;
+  $('#bPlay').textContent = V.paused ? '▶' : '❚❚';
+  if (!v) { $('#time').textContent = '—'; $('#open').textContent = ''; return; }
+  $('#time').textContent = `${f2(t)} с · кадр ${Math.floor(t * v.fps + 1e-6)} · длит. ${v.duration != null ? f2(v.duration) : '…'} с`;
+  $('#open').textContent = v.open.length ? 'открыт: ' + v.open.map(o => `${o.label} с ${f2(o.s)}`).join(' · ') : '';
+}
+
+// ---------- таймлайн ----------
+const niceStep = raw => [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800].find(s => s >= raw) || 3600;
+function drawTimeline() {
+  const v = cv(), W = TL.clientWidth, dpr = devicePixelRatio || 1;
+  const labels = v ? CLASSES.map(c => c.id).filter(id => v.events.some(e => e.label === id) || v.open.some(o => o.label === id)) : [];
+  const top = 14, rowH = 9, H = Math.max(44, top + labels.length * rowH + 6);
+  if (TL.width !== W * dpr || TL.height !== H * dpr) { TL.width = W * dpr; TL.height = H * dpr; TL.style.height = H + 'px'; }
+  tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  tctx.fillStyle = '#0d0f12'; tctx.fillRect(0, 0, W, H);
+  tlRows = [];
+  if (!v || !v.duration) return;
+  const D = v.duration, x = t => t / D * W;
+  const step = niceStep(D / (W / 70));
+  tctx.fillStyle = '#4a515c'; tctx.font = '10px system-ui'; tctx.textBaseline = 'top';
+  for (let t = 0; t <= D; t += step) {
+    tctx.fillRect(x(t), 0, 1, H);
+    tctx.fillText(D >= 120 ? `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}` : t + ' с', x(t) + 2, 1);
+  }
+  tlRows = labels.map((label, i) => ({ label, y: top + i * rowH, h: rowH - 2 }));
+  for (const r of tlRows) {
+    tctx.fillStyle = CLS[r.label].color;
+    for (const e of v.events) if (e.label === r.label) tctx.fillRect(x(e.s), r.y, Math.max(1, x(e.e) - x(e.s)), r.h);
+    tctx.globalAlpha = .45;
+    for (const o of v.open) if (o.label === r.label) tctx.fillRect(x(o.s), r.y, Math.max(1, x(V.currentTime) - x(o.s)), r.h);
+    tctx.globalAlpha = 1;
+  }
+  const sel = v.events.find(e => e.id === selected), sr = sel && tlRows.find(r => r.label === sel.label);
+  if (sr) { tctx.strokeStyle = '#fff'; tctx.lineWidth = 1; tctx.strokeRect(x(sel.s) - .5, sr.y - 1.5, x(sel.e) - x(sel.s) + 1, sr.h + 3); }
+  tctx.fillStyle = '#fff'; tctx.fillRect(x(V.currentTime) - .5, 0, 1.5, H);
+}
+function tlTime(e) { const r = TL.getBoundingClientRect(); return { t: (e.clientX - r.left) / r.width * cv().duration, y: e.clientY - r.top, x: e.clientX - r.left }; }
+TL.addEventListener('mousedown', e => { if (cv()?.duration) { dragging = true; seek(tlTime(e).t); } });
+window.addEventListener('mouseup', () => { dragging = false; });
+TL.addEventListener('mousemove', e => {
+  const v = cv(); if (!v || !v.duration) return;
+  const { t, y, x } = tlTime(e);
+  if (dragging) seek(t);
+  const row = tlRows.find(r => y >= r.y - 1 && y <= r.y + r.h + 1);
+  const ev = row && v.events.find(o => o.label === row.label && t >= o.s && t <= o.e);
+  const tip = $('#tip');
+  tip.style.display = 'block'; tip.style.left = Math.min(x + 22, TL.clientWidth - 120) + 'px'; tip.style.top = '-20px';
+  tip.textContent = ev ? `${ev.label}: ${f2(ev.s)} – ${f2(ev.e)}` : `${row ? row.label + ' · ' : ''}${f2(t)} с`;
+});
+TL.addEventListener('mouseleave', () => { $('#tip').style.display = 'none'; });
+window.addEventListener('resize', () => { tlDirty = true; });
+(function loop() {
+  if (cur >= 0 && (tlDirty || V.currentTime !== lastT)) { lastT = V.currentTime; tlDirty = false; drawTimeline(); updateTime(); }
+  requestAnimationFrame(loop);
+})();
+
+// ---------- клавиатура ----------
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') { if (e.code === 'Escape' || e.code === 'Enter') document.activeElement.blur(); return; }
+  if (cur < 0 || e.altKey || e.metaKey) return;
+  const c = e.code, v = cv();
+  if (c === 'Space') togglePlay();
+  else if (c === 'ArrowLeft' || c === 'ArrowRight') {
+    const d = c === 'ArrowLeft' ? -1 : 1;
+    if (e.ctrlKey) seek(V.currentTime + 5 * d); else if (e.shiftKey) seek(V.currentTime + d); else stepFrames(d);
+  }
+  else if (c === 'KeyJ') seek(V.currentTime - 10);
+  else if (c === 'KeyL') seek(V.currentTime + 10);
+  else if (c === 'Home') seek(0);
+  else if (c === 'End') seek(v.duration || 0);
+  else if (c === 'Enter') closeSeg();
+  else if (c === 'Escape') cancelSeg();
+  else if (c === 'Backspace' || c === 'Delete') deleteSelected();
+  else if (c === 'ArrowUp' || c === 'ArrowDown') moveSelection(c === 'ArrowUp' ? -1 : 1);
+  else if (CODE2CLS[c] && !e.ctrlKey) openSeg(CODE2CLS[c]);
+  else return;
+  e.preventDefault(); e.stopPropagation();
+}, true);
+
+// ---------- элементы управления ----------
+$('#bPlay').onclick = e => { e.target.blur(); togglePlay(); };
+$('#rate').onchange = e => { V.playbackRate = V.defaultPlaybackRate = +e.target.value; e.target.blur(); };
+$('#bLoad').onclick = () => $('#fVideo').click();
+$('#bImport').onclick = () => $('#fJson').click();
+$('#fVideo').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+$('#fJson').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(importJSON); e.target.value = ''; };
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); addFiles(e.dataTransfer.files); });
+
+// ---------- импорт / экспорт ----------
+function importJSON(text) {
+  let data;
+  try { data = JSON.parse(text); } catch { return setStatus('Не удалось разобрать JSON', true); }
+  if (data && data.videos && typeof data.videos === 'object') data = data.videos; // формат предсказаний тоже принимаем
+  let upd = 0, stored = 0;
+  for (const [name, rec] of Object.entries(data || {})) {
+    if (!rec || !Array.isArray(rec.events)) continue;
+    const evs = rec.events.filter(e => Array.isArray(e) && e.length === 3 && CLS[e[2]]).map(e => [r2(+e[0]), r2(+e[1]), e[2]]);
+    const v = videos.find(x => x.name === name);
+    if (v) {
+      for (const [s, e, label] of evs) if (!v.events.some(x => x.s === s && x.e === e && x.label === label)) v.events.push({ id: nextId++, s, e, label });
+      if (rec.fps > 0) v.fps = +rec.fps;
+      saveStore(v); upd++;
+    } else { // видео ещё не загружено — кладём в хранилище, подхватится при загрузке
+      const st = loadStore(name) || { fps: 25, events: [] };
+      for (const ev of evs) if (!st.events.some(x => x[0] === ev[0] && x[1] === ev[1] && x[2] === ev[2])) st.events.push(ev);
+      if (rec.fps > 0) st.fps = +rec.fps;
+      localStorage.setItem(skey(name), JSON.stringify(st)); stored++;
+    }
+  }
+  if (cur >= 0) $('#fps').value = cv().fps;
+  refresh();
+  setStatus(`Импорт: обновлено загруженных видео ${upd}, отложено для незагруженных ${stored}`);
+}
+function buildJSON() {
+  const out = {};
+  for (const v of videos) out[v.name] = {
+    duration: Math.round(v.duration * 1000) / 1000,
+    fps: v.fps,
+    events: v.events.slice().sort((a, b) => a.s - b.s || a.e - b.e).map(e => [e.s, e.e, e.label]),
+  };
+  return JSON.stringify(out, null, 1);
+}
+function exportReady() {
+  if ($('#bDownload').disabled) { setStatus('Экспорт недоступен: исправьте ошибки или дождитесь метаданных', true); return false; }
+  const open = videos.reduce((n, v) => n + v.open.length, 0);
+  if (open) setStatus(`Внимание: ${open} открытых сегментов не вошли в экспорт`, true);
+  return true;
+}
+$('#bDownload').onclick = () => {
+  if (!exportReady()) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buildJSON()], { type: 'application/json' }));
+  a.download = 'my_labels.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  setStatus('my_labels.json скачан');
+};
+$('#bCopy').onclick = () => {
+  if (!exportReady()) return;
+  const text = buildJSON();
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    setStatus(ok ? 'Скопировано в буфер' : 'Буфер недоступен', !ok);
+  };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => setStatus('Скопировано в буфер'), fallback); else fallback();
+};
+
+renderPalette();
+</script>
+</body>
+</html>

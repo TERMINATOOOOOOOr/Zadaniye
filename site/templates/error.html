@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} — {{ site.name }}{% endblock %}
+{% block content %}
+<section class="centered">
+  <p class="eyebrow">error {{ status }}</p>
+  <h1>{% if status == 404 %}Page not found{% else %}Something went wrong{% endif %}</h1>
+  <p class="muted">{{ detail }}</p>
+  <p><a class="btn" href="/">Back to home</a></p>
+</section>
+{% endblock %}

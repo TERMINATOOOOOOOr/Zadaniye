@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Links — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Links</h1>
+<p class="muted">Values are set in <code>site/config.py</code>.</p>
+<div class="grid cards">
+  <a class="card link-card" href="{{ site.repo }}" rel="noopener" target="_blank"><h3>Repository</h3><p class="mono">{{ site.repo }}</p></a>
+  <a class="card link-card" href="{{ site.weights }}" rel="noopener" target="_blank"><h3>Model weights</h3><p class="mono">{{ site.weights }}</p></a>
+  <a class="card link-card" href="{{ site.source }}" rel="noopener" target="_blank"><h3>Site source</h3><p class="mono">{{ site.source }}</p></a>
+  {% if predictions_exists %}
+  <a class="card link-card" href="/downloads/predictions_samples.json"><h3>predictions_samples.json</h3><p>Predictions on the organisers' samples in the harness format.</p></a>
+  {% else %}
+  <div class="card link-card disabled"><h3>predictions_samples.json</h3><p class="muted">Will appear after the run on the samples (file in the repository root).</p></div>
+  {% endif %}
+  <a class="card link-card" href="/api/openapi.json"><h3>API</h3><p>OpenAPI schema for <code>/api/detect</code> and <code>/api/jobs</code>; usage examples are on the <a href="/demo">Demo</a> page.</p></a>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{
+  "_comment": "PLACEHOLDER — replace the members. Fields: name, role, contributions[], github, linkedin, portfolio, past_projects[] (a string or {name, url, note}).",
+  "members": [
+    {
+      "name": "Member 1",
+      "role": "Computer vision: detector and tracking",
+      "contributions": [
+        "Fine-tuning YOLO11 on road-camera frames",
+        "ByteTrack integration, trajectory smoothing",
+        "Part B: TTC estimation and the risk curve"
+      ],
+      "github": "https://github.com/",
+      "linkedin": "https://www.linkedin.com/",
+      "portfolio": "",
+      "past_projects": [
+        {"name": "Project 1", "url": "", "note": "one line about the outcome"}
+      ]
+    },
+    {
+      "name": "Member 2",
+      "role": "Event rules and scene geometry",
+      "contributions": [
+        "Lane, stop-line and crossing annotation",
+        "Rule engine for the 14 classes",
+        "Segment post-processing and format validation"
+      ],
+      "github": "https://github.com/",
+      "linkedin": "https://www.linkedin.com/",
+      "portfolio": "",
+      "past_projects": [
+        "Project 2 — one line about the outcome"
+      ]
+    },
+    {
+      "name": "Member 3",
+      "role": "Data, EDA, website and presentation",
+      "contributions": [
+        "EDA on the dev videos, heatmaps",
+        "Team website and demo stand",
+        "Report and presentation"
+      ],
+      "github": "https://github.com/",
+      "linkedin": "https://www.linkedin.com/",
+      "portfolio": "",
+      "past_projects": []
+    }
+  ]
+}

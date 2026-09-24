@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Report — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Report</h1>
+<p class="muted">What worked, what did not, what comes next. The text is edited in <code>site/content/report.md</code>.</p>
+<article class="prose">
+{{ body|safe }}
+</article>
+{% endblock %}

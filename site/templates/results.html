@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Results — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Results</h1>
+<p class="muted">Pipeline run on the dev videos: annotated clip, event timeline (click to jump to the moment), event table and risk curve. Data comes from <code>site/static/results/results.json</code>.</p>
+
+{% if error %}
+<p class="note warn">results.json could not be read: {{ error }}</p>
+{% elif not present %}
+<div class="note empty">
+  <h3>Data will appear after the run</h3>
+  <p>Put <code>results.json</code> into <code>site/static/results/</code> and the annotated clips into <code>site/static/media/</code> — the page assembles itself.</p>
+</div>
+{% elif not videos %}
+<p class="note">results.json contains no videos yet.</p>
+{% endif %}
+
+{% for v in videos %}
+<section class="card block result" id="video-{{ loop.index0 }}" data-result="{{ loop.index0 }}">
+  <h2>{{ v.get('name') or ('video ' ~ loop.index) }}</h2>
+  <p class="muted small">duration {{ v.duration|fmt_time }} · events: {{ v.events|length }} · classes:
+    {% for c in v.labels %}<span class="badge" style="--c: var(--c-{{ c }})">{{ c }}</span>{% else %}none{% endfor %}</p>
+  {% if v.src %}
+  <video data-role="video" controls preload="metadata" playsinline src="{{ v.src }}"></video>
+  {% else %}
+  <p class="note">No annotated video for this clip (annotated_mp4 not set and no media/&lt;name&gt;_annotated.mp4 found).</p>
+  {% endif %}
+  <h3>Timeline</h3>
+  <div data-role="timeline"></div>
+  <h3>Accident risk (Part B)</h3>
+  <div class="chart-box risk"><canvas class="chart" data-role="risk" height="150"></canvas></div>
+  <h3>Events</h3>
+  <div class="table-scroll"><table class="events" data-role="table"></table></div>
+</section>
+{% endfor %}
+
+{% if examples %}
+<section>
+  <h2>Class examples</h2>
+  <div class="gallery">
+    {% for ex in examples %}
+    <figure>
+      <img src="{{ ex.url }}" alt="{{ ex.name }}" loading="lazy">
+      <figcaption>{% if ex.cls %}<span class="badge" style="--c: var(--c-{{ ex.cls }})">{{ ex.cls }}</span> {% endif %}{{ ex.name }}</figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if failures %}
+<section>
+  <h2>Honest failures</h2>
+  <p class="muted">What the pipeline missed or over-detected, with the moment in the video.</p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>video</th><th>time</th><th>what went wrong</th></tr></thead>
+      <tbody>
+      {% for f in failures %}
+      <tr><td>{{ f.get('video', '—') }}</td><td>{{ f.get('t')|fmt_time }}</td><td>{{ f.get('note', '') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script type="application/json" id="results-data">{{ videos|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/timeline.js"></script>
+<script src="/static/js/player.js"></script>
+<script>
+(function () {
+  var el = document.getElementById('results-data');
+  if (!el) return;
+  var videos = JSON.parse(el.textContent || '[]');
+  document.querySelectorAll('[data-result]').forEach(function (root) {
+    var v = videos[+root.getAttribute('data-result')];
+    if (v) TE.mountResult(root, v);
+  });
+})();
+</script>
+{% endblock %}

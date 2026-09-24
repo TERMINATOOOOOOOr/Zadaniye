@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Approach — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Approach</h1>
+<p class="muted">Pipeline diagram and description. The text is edited in <code>site/content/approach.md</code>.</p>
+
+<figure class="diagram-wrap">
+  <div class="diagram-scroll">
+  <svg class="diagram" viewBox="0 0 960 340" role="img" aria-labelledby="diag-title">
+    <title id="diag-title">Pipeline: video → frame sampler → YOLO11 detector → ByteTrack → trajectories → scene geometry → rule engine → segment post-processing → events; side branch trajectories → TTC risk (Part B)</title>
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0 0L10 5L0 10z" class="arrow-head"/>
+      </marker>
+    </defs>
+
+    <!-- row 1 -->
+    <g class="box data"><rect x="20" y="30" width="110" height="54" rx="8"/><text x="75" y="62">video</text></g>
+    <path class="arrow" d="M130 57H166"/>
+    <g class="box rule"><rect x="170" y="30" width="130" height="54" rx="8"/><text x="235" y="52">frame</text><text x="235" y="70">sampler</text></g>
+    <path class="arrow" d="M300 57H336"/>
+    <g class="box learned"><rect x="340" y="30" width="150" height="54" rx="8"/><text x="415" y="52">YOLO11</text><text x="415" y="70">detector</text></g>
+    <path class="arrow" d="M490 57H526"/>
+    <g class="box rule"><rect x="530" y="30" width="120" height="54" rx="8"/><text x="590" y="62">ByteTrack</text></g>
+    <path class="arrow" d="M650 57H686"/>
+    <g class="box data"><rect x="690" y="30" width="130" height="54" rx="8"/><text x="755" y="62">trajectories</text></g>
+
+    <!-- link to row 2 -->
+    <path class="arrow" d="M720 84V116H95V146"/>
+
+    <!-- row 2 -->
+    <g class="box rule"><rect x="20" y="150" width="150" height="54" rx="8"/><text x="95" y="172">scene</text><text x="95" y="190">geometry</text></g>
+    <path class="arrow" d="M170 177H206"/>
+    <g class="box rule"><rect x="210" y="150" width="170" height="54" rx="8"/><text x="295" y="172">rule engine</text><text x="295" y="190">(per class)</text></g>
+    <path class="arrow" d="M380 177H416"/>
+    <g class="box rule"><rect x="420" y="150" width="190" height="54" rx="8"/><text x="515" y="172">segment</text><text x="515" y="190">post-processing</text></g>
+    <path class="arrow" d="M610 177H646"/>
+    <g class="box out"><rect x="650" y="150" width="110" height="54" rx="8"/><text x="705" y="162" class="small">Part A</text><text x="705" y="184">events</text></g>
+
+    <!-- risk branch -->
+    <path class="arrow" d="M800 84V146"/>
+    <g class="box rule"><rect x="800" y="150" width="140" height="54" rx="8"/><text x="870" y="172">TTC risk</text><text x="870" y="190">(Part B)</text></g>
+    <path class="arrow" d="M870 204V246"/>
+    <g class="box out"><rect x="800" y="250" width="140" height="54" rx="8"/><text x="870" y="262" class="small">Part B</text><text x="870" y="284">risk curve</text></g>
+
+    <!-- legend -->
+    <g class="legend">
+      <rect x="20" y="258" width="18" height="14" rx="3" class="lg learned"/><text x="46" y="270">learned block</text>
+      <rect x="160" y="258" width="18" height="14" rx="3" class="lg rule"/><text x="186" y="270">rule-based / algorithm</text>
+      <rect x="360" y="258" width="18" height="14" rx="3" class="lg data"/><text x="386" y="270">data</text>
+      <rect x="440" y="258" width="18" height="14" rx="3" class="lg out"/><text x="466" y="270">output</text>
+    </g>
+    <text x="20" y="318" class="caption">Part B reuses the same trajectories and estimates time-to-collision (TTC) for object pairs without looking at future frames.</text>
+  </svg>
+  </div>
+  <figcaption>Pipeline diagram. Only the detector is learned; everything after it is interpretable rules.</figcaption>
+</figure>
+
+<article class="prose">
+{{ body|safe }}
+</article>
+{% endblock %}

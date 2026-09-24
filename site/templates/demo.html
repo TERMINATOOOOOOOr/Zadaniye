@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Demo — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Demo</h1>
+<p class="muted">Upload a clip from a fixed road camera — the pipeline finds the events and builds the risk curve.
+  Limits: <strong>.mp4</strong>, up to <strong>{{ max_sec // 60 }} minutes</strong> and <strong>{{ max_mb }} MB</strong>. Processing on CPU takes
+  roughly as long as the video itself. Jobs run one at a time; files are deleted after 2 hours.</p>
+
+{% if not avail.solution %}
+<p class="note warn"><code>solution.py</code> is not connected to the site yet: uploads are accepted, but jobs will fail until the pipeline is published.</p>
+{% endif %}
+{% if not avail.cv2 %}
+<p class="note warn">OpenCV is not installed on the server — uploads are currently rejected (503).</p>
+{% endif %}
+
+<section class="card block">
+  <form id="demo-form" class="upload" enctype="multipart/form-data" method="post" action="/api/jobs">
+    <label class="file-drop" for="demo-file">
+      <input id="demo-file" type="file" name="file" accept="video/mp4,.mp4" required>
+      <span class="file-drop-text">Choose an .mp4 or drop it here</span>
+      <span class="file-drop-meta muted small" id="file-meta">up to {{ max_sec }} s, up to {{ max_mb }} MB</span>
+    </label>
+    <div class="actions">
+      <button class="btn primary" type="submit" id="demo-submit">Run</button>
+      <button class="btn" type="button" id="demo-reset" hidden>New file</button>
+    </div>
+  </form>
+  <p class="note warn" id="demo-msg" hidden></p>
+
+  <div id="job-status" class="job-status" hidden>
+    <div class="progress"><div class="progress-bar" id="job-bar" style="width:0%"></div></div>
+    <p class="muted small"><span id="job-stage">…</span> · <span id="job-pct">0%</span> <span id="job-extra"></span></p>
+  </div>
+</section>
+
+<section id="job-result" class="card block result" hidden>
+  <h2>Result: <span id="res-name"></span></h2>
+  <p class="muted small" id="res-summary"></p>
+  <video data-role="video" controls preload="metadata" playsinline></video>
+  <p class="note" id="res-noannot" hidden>The annotated video was not produced — showing the original clip.</p>
+  <h3>Timeline</h3>
+  <div data-role="timeline"></div>
+  <h3>Accident risk (Part B)</h3>
+  <div class="chart-box risk"><canvas class="chart" data-role="risk" height="150"></canvas></div>
+  <h3>Events</h3>
+  <div class="table-scroll"><table class="events" data-role="table"></table></div>
+  <div class="actions">
+    <a class="btn" id="res-download" href="#" download="events.json">Download events.json</a>
+  </div>
+  <ul class="tight muted small" id="res-notes"></ul>
+</section>
+
+<section class="prose">
+  <h2>API</h2>
+  <p>The same pipeline is available programmatically. The response is JSON only.</p>
+  <pre><code>curl -F "file=@video.mp4" {{ host }}/api/detect</code></pre>
+  <p>Response:</p>
+  <pre><code>{
+  "job_id": "…", "state": "done", "video": "video.mp4", "duration": 60.0,
+  "events": [[5.0, 8.0, "red_light"], [20.0, 26.0, "accident"]],
+  "risk": [[0.0, 0.0], [0.08, 0.0], …],
+  "timing_sec": {"part_a": 41.2, "part_b": 12.7},
+  "notes": [], "events_url": "/jobs/…/events.json", "annotated_url": null
+}</code></pre>
+  <p>Query parameters: <code>risk=0</code> — skip Part B; <code>annotate=1</code> — also render the video
+    (link in <code>annotated_url</code>); <code>wait=0</code> — return the <code>job_id</code> immediately and poll
+    <code>GET /api/jobs/{id}</code> (fields <code>state</code>, <code>progress</code>, <code>stage</code>, <code>result</code>).
+    Class list: <code>GET /api/classes</code>. The limits are the same as for the form; errors come back as
+    <code>{"detail": "…"}</code> with status 400 / 413 / 503.</p>
+</section>
+
+<script>window.TE_DEMO = {maxMb: {{ max_mb }}, maxSec: {{ max_sec }}};</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/timeline.js"></script>
+<script src="/static/js/player.js"></script>
+<script src="/static/js/demo.js"></script>
+{% endblock %}

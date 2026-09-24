@@ -1,0 +1,9 @@
+# Решение отборочного задания WIUT CV. Python >= 3.10.
+# torch/torchvision: на Linux с GPU pip ставит CUDA-сборку по умолчанию; на CPU тоже работает.
+numpy>=1.24
+opencv-python-headless>=4.8
+torch>=2.4,!=2.4.0,<2.12
+torchvision>=0.19,<0.27
+ultralytics==8.4.152
+lap>=0.5.12
+scipy>=1.10
