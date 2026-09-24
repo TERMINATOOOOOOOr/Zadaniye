@@ -2,7 +2,7 @@
 {% block title %}Demo — {{ site.name }}{% endblock %}
 {% block content %}
 <h1>Demo</h1>
-<p class="muted">Upload a clip from a fixed road camera — the pipeline finds the events and builds the risk curve.
+<p class="muted">Upload a clip from a fixed road camera or paste a link to one — the pipeline finds the events and builds the risk curve.
   Limits: <strong>.mp4</strong>, up to <strong>{{ max_sec // 60 }} minutes</strong> and <strong>{{ max_mb }} MB</strong>. Processing runs on CPU: about the length of the video for 1080p and several times the length for 4K (a 2-minute 4K clip from this camera takes 5–10 minutes). Jobs run one at a time; files are deleted after 2 hours.</p>
 
 {% if not avail.solution %}
@@ -24,6 +24,13 @@
       <button class="btn" type="button" id="demo-reset" hidden>New file</button>
     </div>
   </form>
+  <div class="url-row" style="margin-top:14px">
+    <label for="demo-url" class="muted small">Or paste a link — a public Google Drive share link or a direct .mp4 URL — and the server downloads it (no browser upload):</label>
+    <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <input id="demo-url" type="url" placeholder="https://drive.google.com/file/d/…/view" style="flex:1;min-width:240px;padding:10px 12px;border-radius:8px;border:1px solid var(--border, #334);background:var(--bg2, #111827);color:inherit">
+      <button class="btn" type="button" id="demo-url-run">Run from link</button>
+    </div>
+  </div>
   <p class="note warn" id="demo-msg" hidden></p>
 
   <div id="job-status" class="job-status" hidden>

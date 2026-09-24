@@ -37,6 +37,8 @@ import config  # noqa: E402
 import mdlite  # noqa: E402
 import bridge  # noqa: E402  — обёртки над solution.py / src.render (ленивые импорты)
 from jobs import Job, JobQueue  # noqa: E402
+import fetch  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("site")
@@ -312,6 +314,37 @@ async def create_job(request: Request, upload: UploadFile, options: dict[str, An
 async def api_jobs_create(request: Request, file: UploadFile = File(...)):
     job = await create_job(request, file, {"risk": True, "annotate": True})
     return {"id": job.id, "status_url": f"/api/jobs/{job.id}", "position": queue.position(job)}
+
+
+class UrlJob(BaseModel):
+    url: str
+
+
+def _finish_download(job: Job, dest: Path) -> None:
+    """Скачивание закончено: проверить длительность и поставить в очередь (вызывается из потока загрузки)."""
+    try:
+        meta = bridge.probe_video(dest)
+    except RuntimeError as exc:
+        raise ValueError(str(exc)) from exc
+    if meta["duration"] > config.MAX_DURATION_SEC + 0.5:
+        raise ValueError(f"video is longer than {config.MAX_DURATION_SEC} s (this file is {meta['duration']:.1f} s)")
+    job.meta = meta
+    queue.submit(job)
+    log.info("job %s: downloaded %s, %.1f s, %.1f MB", job.id, job.video_name, meta["duration"], job.size_bytes / 1048576)
+
+
+@app.post("/api/jobs_url", status_code=202)
+async def api_jobs_from_url(body: UrlJob):
+    """Тот же конвейер, но видео скачивает сервер: прямая ссылка или публичная ссылка Google Drive."""
+    if not bridge.has_cv2():
+        raise HTTPException(503, "OpenCV is not installed on the server — the demo is temporarily unavailable")
+    try:
+        url, name = fetch.resolve(body.url)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    job = queue.create(video_name=name, options={"risk": True, "annotate": True, "source_url": body.url})
+    fetch.download(job, url, job.dir / "input.mp4", MAX_BYTES, _finish_download)
+    return {"id": job.id, "status_url": f"/api/jobs/{job.id}", "position": None}
 
 
 @app.get("/api/jobs/{job_id}")

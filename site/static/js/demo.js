@@ -70,9 +70,29 @@
     });
   });
 
+  var urlInput = document.getElementById('demo-url');
+  var urlRun = document.getElementById('demo-url-run');
+  if (urlRun) urlRun.addEventListener('click', function () {
+    var u = (urlInput.value || '').trim();
+    say('');
+    if (!u) return say('Paste a link to an .mp4 (Google Drive share link or direct URL)');
+    if (!/^https?:\/\//i.test(u)) return say('The link must start with http:// or https://');
+    urlRun.disabled = true; submit.disabled = true;
+    resultEl.hidden = true; bar.style.background = '';
+    setBar(0, 'requesting download');
+    fetch('/api/jobs_url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: u }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        urlRun.disabled = false;
+        if (x.ok && x.j && x.j.id) { setBar(0, 'downloading'); poll(x.j.id); }
+        else fail((x.j && x.j.detail) || 'server rejected the link');
+      })
+      .catch(function () { urlRun.disabled = false; fail('network unavailable'); });
+  });
+
   reset.addEventListener('click', function () {
     clearTimeout(pollTimer);
-    form.reset(); input.dispatchEvent(new Event('change'));
+    form.reset(); input.dispatchEvent(new Event('change')); if (urlInput) urlInput.value = '';
     status.hidden = true; resultEl.hidden = true; reset.hidden = true; submit.disabled = false;
     bar.style.background = ''; bar.style.width = '0%'; say('');
   });
