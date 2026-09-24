@@ -343,7 +343,7 @@ async def api_jobs_from_url(body: UrlJob):
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     job = queue.create(video_name=name, options={"risk": True, "annotate": True, "source_url": body.url})
-    fetch.download(job, url, job.dir / "input.mp4", MAX_BYTES, _finish_download)
+    fetch.download(job, url, job.dir / "input.mp4", MAX_BYTES, _finish_download, max_sec=config.MAX_DURATION_SEC)
     return {"id": job.id, "status_url": f"/api/jobs/{job.id}", "position": None}
 
 

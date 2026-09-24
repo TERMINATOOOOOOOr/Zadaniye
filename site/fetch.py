@@ -20,12 +20,47 @@ _HTML_HEAD = (b"<!doctype", b"<html", b"<head", b"<?xml")
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) TrafficEye-demo/1.0"
 
 
+def is_youtube(url: str) -> bool:
+    host = urllib.parse.urlparse(url).netloc.lower()
+    return any(h in host for h in ("youtube.com", "youtu.be", "youtube-nocookie.com"))
+
+
+def _download_youtube(job: Job, url: str, dest: Path, max_bytes: int, max_sec: int) -> None:
+    """YouTube через yt-dlp (видео-дорожка mp4 до 1080p, без звука). YouTube может блокировать дата-центры."""
+    import subprocess
+    import sys
+    job.set_progress(None, "downloading (YouTube)")
+    cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "--no-warnings",
+           "-f", "bv*[height<=1080][ext=mp4]/b[height<=1080][ext=mp4]/b",
+           "--match-filter", f"duration <= {max_sec}", "--max-filesize", str(max_bytes),
+           "-o", str(dest), url]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    except FileNotFoundError as exc:
+        raise ValueError("yt-dlp is not installed on the server") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError("YouTube download took longer than 15 minutes") from exc
+    if not dest.exists() or dest.stat().st_size == 0:
+        err = (r.stderr or r.stdout or "").strip().splitlines()
+        tail = err[-1] if err else ""
+        if "does not pass filter" in (r.stdout or "") + (r.stderr or ""):
+            raise ValueError(f"the YouTube video is longer than {max_sec} s")
+        if "confirm you" in tail.lower() or "bot" in tail.lower() or "429" in tail or "Sign in" in tail:
+            raise ValueError("YouTube blocks downloads from this server (bot check). Upload the .mp4 file instead, "
+                             "or use a Google Drive / direct link")
+        raise ValueError(f"YouTube download failed: video longer than {max_sec} s, unavailable, or blocked "
+                         f"({tail[:160]})")
+    job.size_bytes = dest.stat().st_size
+
+
 def resolve(url: str) -> tuple[str, str]:
     """(url для скачивания, имя файла для показа). Google Drive share-ссылки переводятся в прямую загрузку."""
     url = url.strip()
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise ValueError("only http(s) links are accepted")
+    if is_youtube(url):
+        return url, "youtube.mp4"
     if "drive.google.com" in parsed.netloc or "docs.google.com" in parsed.netloc:
         m = _DRIVE_ID.search(url)
         if not m:
@@ -38,7 +73,7 @@ def resolve(url: str) -> tuple[str, str]:
     return url, name
 
 
-def download(job: Job, url: str, dest: Path, max_bytes: int, on_done: Callable[[Job, Path], None]) -> None:
+def download(job: Job, url: str, dest: Path, max_bytes: int, on_done: Callable[[Job, Path], None], max_sec: int = 180) -> None:
     """Скачивает в фоне; по завершении зовёт on_done(job, dest) (проверка длительности и постановка в очередь)."""
 
     def run() -> None:
@@ -47,6 +82,10 @@ def download(job: Job, url: str, dest: Path, max_bytes: int, on_done: Callable[[
         total = 0
         started = time.time()
         try:
+            if is_youtube(url):
+                _download_youtube(job, url, dest, max_bytes, max_sec)
+                on_done(job, dest)
+                return
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
             with urllib.request.urlopen(req, timeout=60) as resp:
                 length = resp.headers.get("Content-Length")
