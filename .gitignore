@@ -37,3 +37,4 @@ weights/*
 Thumbs.db
 __pycache__/
 .pytest_cache/
+*.raw.mp4
