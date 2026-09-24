@@ -31,8 +31,8 @@ MEDIA_DIR = STATIC_DIR / "media"
 ANNOTATED_DIRS = ("media", "results")  # где искать <name>_annotated.mp4, если путь не указан
 
 # --- Демо / очередь задач ---------------------------------------------------
-MAX_UPLOAD_MB = 2500  # 2 минуты 4K с этой камеры (147 Мбит/с) ≈ 2.2 ГБ
-MAX_DURATION_SEC = 120
+MAX_UPLOAD_MB = 3500  # 3 минуты 4K с этой камеры (147 Мбит/с) ≈ 3.3 ГБ
+MAX_DURATION_SEC = 180  # сэмпл организаторов C3905 длится 128 с, 2 минут не хватало
 JOBS_DIR = SITE_DIR / "jobs_store"  # временные файлы задач (в .gitignore)
 JOB_TTL_SEC = 2 * 3600  # задачи старше этого удаляются
 JOB_CLEANUP_INTERVAL_SEC = 300
