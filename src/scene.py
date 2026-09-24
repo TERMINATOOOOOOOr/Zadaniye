@@ -87,13 +87,16 @@ class Scene:
     crosswalks: list[tuple[str, np.ndarray]]
     stop_lines: list[StopLine]
     solid_lines: list[tuple[str, np.ndarray]]
+    islands: list[np.ndarray]
     signal_visible: bool
     signal_roi: tuple[int, int, int, int] | None
     notes: str = ""
 
     # --- запросы ---
     def in_road(self, x: float, y: float) -> bool:
-        return point_in_poly(self.road, x, y) if self.road is not None else False
+        if self.road is None or not point_in_poly(self.road, x, y):
+            return False
+        return not any(point_in_poly(p, x, y) for p in self.islands)
 
     def in_intersection(self, x: float, y: float) -> bool:
         return point_in_poly(self.intersection, x, y) if self.intersection is not None else False
@@ -133,6 +136,7 @@ class Scene:
             crosswalks=[(n, sc(p)) for n, p in self.crosswalks],
             stop_lines=[StopLine(s.name, s.p1 * m, s.p2 * m, s.approach, s.lanes) for s in self.stop_lines],
             solid_lines=[(n, sc(p)) for n, p in self.solid_lines],
+            islands=[sc(p) for p in self.islands],
             signal_visible=self.signal_visible,
             signal_roi=(tuple(int(v * f) for v, f in zip(self.signal_roi, (sx, sy, sx, sy))) if self.signal_roi else None),
             notes=self.notes,
@@ -156,6 +160,7 @@ def load_scene(path: str | Path) -> Scene | None:
         stop_lines=[StopLine(s.get("name", f"sl{i}"), np.asarray(s["p1"], dtype=np.float32), np.asarray(s["p2"], dtype=np.float32),
                              _unit(s.get("approach", [0, 0])), list(s.get("lanes", []))) for i, s in enumerate(d.get("stop_lines", []))],
         solid_lines=[(s.get("name", f"s{i}"), _poly(s["points"])) for i, s in enumerate(d.get("solid_lines", []))],
+        islands=[_poly(p["polygon"] if isinstance(p, dict) else p) for p in d.get("islands", [])],
         signal_visible=bool(sig.get("visible", False)),
         signal_roi=tuple(sig["roi"]) if sig.get("roi") else None,
         notes=d.get("notes", ""),

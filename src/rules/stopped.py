@@ -9,6 +9,7 @@ from ..segments import mask_to_intervals
 STOP_REL_SPEED = 0.12      # скорость < 12 % высоты бокса в секунду = стоит
 QUEUE_RADIUS = 2.5         # сосед на расстоянии < 2.5 высоты бокса, тоже стоящий, = очередь
 MIN_STOP_SEC = 10.0
+BUS_LONG_SEC = 60.0        # автобус на остановке стоит штатно; событие только если дольше минуты
 HOTSPOT_LONG_SEC = 90.0    # в точке штатных остановок (светофор) событие только если стоит дольше цикла
 
 
@@ -28,6 +29,8 @@ def run(ctx: Context) -> list[tuple[float, float]]:
     for tid, ivs in stopped_ivs.items():
         tr = ctx.tracks[tid]
         for s, e in ivs:
+            if tr.cls == "bus" and e - s < BUS_LONG_SEC:
+                continue
             if _in_queue(ctx, tr, s, e, stopped_ivs) or _signal_queue(ctx, tr, s, e):
                 continue
             i = tr.index_at((s + e) / 2)

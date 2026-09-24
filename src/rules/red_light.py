@@ -11,12 +11,18 @@ from ..scene import seg_intersect, side
 
 MOVE_REL = 0.5
 STOP_REL = 0.15
-PAST_LINE_MIN = 0.15     # «за линией»: нижняя точка бокса дальше 0.15 высоты за стоп-линией
+PAST_LINE_MIN = 0.8      # «за линией»: нижняя точка бокса (бампер) глубже 0.8 высоты за стоп-линией
 PAST_LINE_MAX = 2.5      # но не глубже 2.5 высот (иначе это уже проезд перекрёстка)
 MAX_EVENT_SEC = 8.0
 
 
+SIGNAL_RELIABLE = False   # состояние светофора на этой камере читается ненадёжно (блики днём, очередь стоит и на зелёный);
+                          # пока это так, red_light и stop_line не выдаём: ложный класс дороже пропущенного
+
+
 def run_red_light(ctx: Context) -> list[tuple[float, float]]:
+    if not SIGNAL_RELIABLE:
+        return []
     if ctx.scene is None or not ctx.scene.has_stop_lines() or ctx.signal is None or not len(ctx.signal.t):
         return []
     out = []
@@ -38,6 +44,8 @@ def run_red_light(ctx: Context) -> list[tuple[float, float]]:
 
 
 def run_stop_line(ctx: Context) -> list[tuple[float, float]]:
+    if not SIGNAL_RELIABLE:
+        return []
     if ctx.scene is None or not ctx.scene.has_stop_lines() or ctx.signal is None or not len(ctx.signal.t):
         return []
     out = []

@@ -10,17 +10,18 @@ import numpy as np
 from ..context import Context
 from ..tracking import Track
 
-APPROACH_REL = 1.2       # скорость сближения > 80 % средней высоты боксов в секунду
-CONTACT_ND = 0.45        # нормированная дистанция центров (на среднюю высоту) при контакте
-CONTACT_IOU = 0.25
+APPROACH_REL = 1.5       # скорость сближения > 1.5 средней высоты боксов в секунду
+CONTACT_ND = 0.35        # нормированная дистанция центров (на среднюю высоту) при контакте
+CONTACT_IOU = 0.35
 REST_REL = 0.15          # «остановился»: < 15 % высоты в секунду
 REST_WITHIN = 2.5        # остановка не позже 2.5 с после контакта
-REST_HOLD = 2.0          # и стоит не меньше 2 с
-JERK_REL = 1.5           # резкость: скорость упала на 1.5 высоты/с за секунду
-NEAR_ND = 0.9            # near miss: сблизились ближе 0.9 высоты, но без контакта
+REST_HOLD = 4.0          # и стоят не меньше 4 с (очередь у светофора трогается раньше, авария — нет)
+JERK_REL = 2.0           # резкость: скорость упала на 2 высоты/с за секунду
+NEAR_ND = 0.6            # near miss: сблизились ближе 0.6 высоты, но без контакта
 NEAR_MIN_ND = 0.5
-EVASION_ACC_REL = 1.5    # уклонение: замедление > 1.5 высоты/с² или поворот > 25°
-EVASION_TURN_DEG = 25.0
+EVASION_ACC_REL = 3.0    # уклонение: замедление > 3 высот/с² или поворот > 40°
+EVASION_TURN_DEG = 40.0
+NEAR_MIN_SPEED_REL = 2.0 # near miss только на скорости: медленный подъезд к пешеходу у перехода — норма
 MIN_OVERLAP = 0.6        # минимальное совместное время пары, с
 ACCIDENT_MIN_SEC = 3.0   # длительность аварии по разметке организаторов обычно 3–6 с
 NEAR_MISS_MIN_SEC = 2.0
@@ -69,8 +70,9 @@ def _analyse_pair(ta: Track, tb: Track, s: float, e: float, is_hotspot=None):
     # «догнал очередь»: тот, к кому подъехали, УЖЕ стоял до подъезда и стоял в очереди/точке штатных остановок
     if is_hotspot is not None:
         for X in (A, B):
-            if (X["speed"][lo] < 0.3 * X["h"][lo] and X["speed"][i_min] < 0.3 * X["h"][i_min]
-                    and is_hotspot(X["cx"][lo], X["cy"][lo] + X["h"][lo] / 2, float(ts[lo]), X["h"][lo])):
+            slow_now = X["speed"][i_min] < 0.5 * X["h"][i_min]
+            if slow_now and (is_hotspot(X["cx"][lo], X["cy"][lo] + X["h"][lo] / 2, float(ts[lo]), X["h"][lo])
+                             or is_hotspot(X["cx"][i_min], X["cy"][i_min] + X["h"][i_min] / 2, float(ts[i_min]), X["h"][i_min])):
                 return None
     # был ли быстрый подход за 2 с до минимума
     fast_before = bool(approach[lo:i_min + 1].any())
@@ -84,17 +86,24 @@ def _analyse_pair(ta: Track, tb: Track, s: float, e: float, is_hotspot=None):
         t_c = float(ts[i_c])
         rest = _rest_time(A, B, ts, i_c)
         jerk = _jerk(A, B, ts, i_c)
+        # наезд на пешехода засчитываем только при быстрой машине: медленный подъезд к людям у зебры — норма
+        if ta.kind != "vehicle" or tb.kind != "vehicle":
+            V = A if ta.kind == "vehicle" else B
+            if (V["speed"][lo:i_c + 1] < 2.0 * V["h"][lo:i_c + 1]).all():
+                return None
         if rest is not None and jerk:
             # конец: объекты остановились и постояли (по конвенции «все остановились»); не короче ACCIDENT_MIN_SEC
             return "accident", (t_c, max(rest + 1.0, t_c + ACCIDENT_MIN_SEC))
         return None
     # без контакта: сближение и уклонение; для пары машин обе должны были двигаться
-    both_moving = (A["speed"][lo:i_min + 1] > 0.5 * A["h"][lo:i_min + 1]).any() and (B["speed"][lo:i_min + 1] > 0.5 * B["h"][lo:i_min + 1]).any()
-    if nd[i_min] < NEAR_ND and nd[i_min] >= NEAR_MIN_ND and (both_moving or ta.kind != "vehicle" or tb.kind != "vehicle"):
+    a_fast = (A["speed"][lo:i_min + 1] > NEAR_MIN_SPEED_REL * A["h"][lo:i_min + 1]).any()
+    b_fast = (B["speed"][lo:i_min + 1] > NEAR_MIN_SPEED_REL * B["h"][lo:i_min + 1]).any()
+    vehicles_fast = (a_fast or ta.kind != "vehicle") and (b_fast or tb.kind != "vehicle") and (a_fast or b_fast)
+    if nd[i_min] < NEAR_ND and nd[i_min] >= NEAR_MIN_ND and vehicles_fast:
         w0 = max(0, i_min - int(1.0 / 0.08)); w1 = min(len(ts) - 1, i_min + int(1.0 / 0.08))
         dec = min(A["accel"][w0:w1 + 1].min() / max(A["h"][i_min], 1), B["accel"][w0:w1 + 1].min() / max(B["h"][i_min], 1))
         turn = max(_turn_deg(A, w0, w1), _turn_deg(B, w0, w1))
-        if dec < -EVASION_ACC_REL or turn > EVASION_TURN_DEG:
+        if dec < -EVASION_ACC_REL and turn > EVASION_TURN_DEG / 2:   # уклонение = торможение И виляние; одно без другого в плотном потоке слишком часто
             onset = float(ts[w0 + int(np.argmin(np.minimum(A["accel"][w0:w1 + 1], B["accel"][w0:w1 + 1])))]) if dec < -EVASION_ACC_REL else float(ts[w0])
             clear = ts[i_min:][nd[i_min:] > 1.5]
             t_end = float(clear[0]) if len(clear) else float(ts[-1])

@@ -45,6 +45,7 @@ class Context:
     flow: FlowField
     signal: SignalTrack | None = None
     stops: StopMap | None = None
+    signal_roi: SignalTrack | None = None   # состояние по цвету лампы (только для EDA)
 
     @property
     def duration(self) -> float:

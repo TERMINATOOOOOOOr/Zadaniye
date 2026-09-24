@@ -52,3 +52,44 @@ class SignalReader:
                 cur = s
             states.append(cur)
         return SignalTrack(t=np.array(self.ts), state=states)
+
+
+def signal_from_traffic(ctx, bin_sec: float = 0.5, queue_min: int = 2, queue_hold_sec: float = 3.0,
+                        queue_depth_rel: float = 6.0, stop_rel: float = 0.15) -> SignalTrack | None:
+    """Состояние светофора по поведению машин у стоп-линии: очередь стоит ≥ queue_hold_sec — «красный»,
+    машины пересекают линию и очереди нет — «зелёный», иначе «неизвестно». Не зависит от цвета лампы в кадре."""
+    if ctx.scene is None or not ctx.scene.has_stop_lines() or ctx.duration <= 0:
+        return None
+    from .scene import seg_intersect
+    ts = np.arange(0.0, ctx.duration + bin_sec, bin_sec)
+    queued_ids: list[set] = [set() for _ in ts]   # какие машины стоят у линии в каждом бине
+    crossing = np.zeros(len(ts))
+    for sl in ctx.scene.stop_lines:
+        mid = (sl.p1 + sl.p2) / 2
+        for tr in ctx.vehicles():
+            for i in range(len(tr.t)):
+                b = int(tr.t[i] // bin_sec)
+                if b >= len(ts):
+                    continue
+                d = np.array([tr.cx[i], tr.by[i]]) - mid
+                along = float(np.dot(d, sl.approach))
+                lateral = abs(float(d[0] * sl.approach[1] - d[1] * sl.approach[0]))
+                half = float(np.hypot(*(sl.p2 - sl.p1))) / 2 + tr.size
+                if -queue_depth_rel * tr.size < along < 0.3 * tr.size and lateral < half and tr.speed[i] < stop_rel * tr.size:
+                    queued_ids[b].add(tr.id)
+                if i > 0 and seg_intersect((tr.cx[i - 1], tr.by[i - 1]), (tr.cx[i], tr.by[i]), sl.p1, sl.p2) \
+                        and float(np.dot(np.array([tr.vx[i], tr.vy[i]]), sl.approach)) > 0:
+                    crossing[b] += 1
+    queued = np.array([len(q) for q in queued_ids], dtype=float)
+    hold = max(1, int(round(queue_hold_sec / bin_sec)))
+    states: list[str] = []
+    run = 0
+    for b in range(len(ts)):
+        run = run + 1 if queued[b] >= queue_min else 0
+        if run >= hold:
+            states.append("red")
+        elif crossing[max(0, b - 2):b + 1].sum() >= 1 and queued[b] < queue_min:
+            states.append("green")
+        else:
+            states.append("unknown")
+    return SignalTrack(t=ts, state=states)

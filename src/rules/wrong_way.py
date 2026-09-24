@@ -8,9 +8,9 @@ from ..segments import mask_to_intervals, merge_intervals
 
 MOVE_REL_SPEED = 0.5    # анализируем только движущиеся: > 50 % высоты бокса в секунду
 ANGLE_DEG = 120.0       # угол между скоростью и эталоном больше этого = против движения
-MIN_CONSENSUS = 0.75    # для поля направлений: ячейка должна быть «однонаправленной»
-MIN_RUN_SEC = 1.5
-MIN_DISPLACEMENT = 1.0  # суммарное смещение против потока не меньше одной высоты бокса
+MIN_CONSENSUS = 0.85    # для поля направлений: ячейка должна быть «однонаправленной»
+MIN_RUN_SEC = 2.5
+MIN_DISPLACEMENT = 2.0  # суммарное смещение против потока не меньше двух высот бокса
 
 
 def run(ctx: Context) -> list[tuple[float, float]]:

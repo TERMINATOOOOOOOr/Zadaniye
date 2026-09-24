@@ -6,7 +6,9 @@ import numpy as np
 from ..context import Context
 
 MOVE_REL = 0.4
-U_TURN_DEG = 150.0
+U_TURN_DEG = 160.0
+U_TURN_MIN_DISP = 2.5    # смещение между началом и концом разворота не меньше 2.5 высот бокса
+INTERSECTION_MARGIN = 2.0  # разворот, начатый ближе 2 высот к зоне перекрёстка, считаем манёвром на перекрёстке
 TURN_MIN_DEG, TURN_MAX_DEG = 60.0, 125.0
 WINDOW_SEC = 12.0
 RATE_DEG_PER_S = 8.0     # начало/конец манёвра: угловая скорость выше этого
@@ -53,6 +55,12 @@ def run_u_turn(ctx: Context) -> list[tuple[float, float]]:
             if deg < U_TURN_DEG:
                 continue
             if not ctx.on_road(tr.cx[i], tr.by[i]):
+                continue
+            if ctx.scene is not None and ctx.scene.intersection is not None:
+                import cv2
+                if cv2.pointPolygonTest(ctx.scene.intersection, (float(tr.cx[i]), float(tr.by[i])), True) > -INTERSECTION_MARGIN * tr.size:
+                    continue   # разворот на перекрёстке или рядом — обычный манёвр, судить без разметки полос нельзя
+            if np.hypot(tr.cx[j] - tr.cx[i], tr.by[j] - tr.by[i]) < U_TURN_MIN_DISP * tr.size:
                 continue
             allowed = False
             if ctx.scene is not None and ctx.scene.has_lanes():

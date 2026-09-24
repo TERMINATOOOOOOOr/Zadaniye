@@ -12,7 +12,7 @@ from .flow import FlowField, StopMap
 from .rules import collision, congestion, lines, obstacle, pedestrian, red_light, stopped, turns, wrong_way
 from .scene import load_scene
 from .segments import finalize_events
-from .signal import SignalReader
+from .signal import SignalReader, signal_from_traffic
 from .tracking import Detector, build_tracks, load_observations, save_observations
 from .video import iter_frames, video_meta
 
@@ -41,7 +41,12 @@ def collect_observations(video_path: str, st: Settings, scene, progress: Progres
         cache = Path(st.cache_dir) / f"{Path(video_path).stem}_{key}.npz"
         if cache.exists():
             obs = load_observations(str(cache))
-            return obs, _signal_from_cache(cache), meta
+            signal = _signal_from_cache(cache)
+            if signal is None and scene is not None and scene.signal_visible and scene.signal_roi                     and tuple(scene.frame_size) == (meta["width"], meta["height"]):
+                signal = signal_only_pass(video_path, scene.signal_roi, st)
+                import numpy as np
+                np.savez_compressed(str(cache).replace(".npz", "_signal.npz"), t=signal.t, state=np.array(signal.state))
+            return obs, signal, meta
     det = get_detector(st)
     det.reset()
     same_camera = scene is not None and tuple(scene.frame_size) == (meta["width"], meta["height"])
@@ -66,6 +71,14 @@ def collect_observations(video_path: str, st: Settings, scene, progress: Progres
     return obs, signal, meta
 
 
+def signal_only_pass(video_path: str, roi, st: Settings):
+    """Только цвет светофора по кадрам (без детектора): нужен, когда детекции уже в кэше."""
+    reader = SignalReader(roi)
+    for idx, t, frame, scale in iter_frames(video_path, st.stride_a, st.imgsz_a):
+        reader.push(frame, t, scale)
+    return reader.finish()
+
+
 def _signal_from_cache(cache: Path):
     import numpy as np
     from .context import SignalTrack
@@ -85,7 +98,13 @@ def build_context(video_path: str, st: Settings, progress: Progress | None = Non
     flow = FlowField(meta["width"], meta["height"]).build(tracks)
     stops = StopMap(meta["width"], meta["height"], cell=flow.cell).build(tracks)
     flow.road_mask |= stops.vehicles >= 3   # колонна/пробка стоит там, где никто не ехал — это тоже дорога
-    return Context(tracks=tracks, meta=meta, scene=scene, flow=flow, signal=signal, stops=stops)
+    ctx = Context(tracks=tracks, meta=meta, scene=scene, flow=flow, signal=signal, stops=stops)
+    # сигнал по поведению трафика надёжнее цвета лампы (блики, ракурс); цвет остаётся для EDA
+    traffic_signal = signal_from_traffic(ctx)
+    if traffic_signal is not None:
+        ctx.signal_roi = signal
+        ctx.signal = traffic_signal
+    return ctx
 
 
 def run_rules(ctx: Context) -> dict[str, list[tuple[float, float]]]:

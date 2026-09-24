@@ -10,8 +10,8 @@ from ..segments import mask_to_intervals
 
 BIN = 0.5               # шаг по времени, с
 SLOW_REL_SPEED = 0.3    # «ползёт»: < 30 % высоты бокса в секунду
-MIN_VEHICLES = 4        # минимум машин в направлении, чтобы говорить о потоке
-SLOW_FRACTION = 0.75    # доля медленных
+MIN_VEHICLES = 6        # минимум машин в направлении, чтобы говорить о потоке
+SLOW_FRACTION = 0.8     # доля медленных
 
 
 def run(ctx: Context) -> list[tuple[float, float]]:
