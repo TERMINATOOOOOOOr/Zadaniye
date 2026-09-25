@@ -5,7 +5,7 @@ Given an `.mp4` from a fixed CCTV camera the system returns every traffic event 
 `[start_sec, end_sec, label]` (Part A) and, frame by frame and causally, the probability that an
 accident starts within the next 5 seconds (Part B).
 
-Team: **Air MAX** (see [Team](#team)). Website: **https://trafficeye-production.up.railway.app**.
+Team: **Air MAX** (see [Team](#team)). Website: **https://trafficeye-production.up.railway.app**. Repository: **https://github.com/TERMINATOOOOOOOr/Zadaniye**.
 
 ## Quick start
 
