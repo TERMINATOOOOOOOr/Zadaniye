@@ -12,7 +12,7 @@ ROOT_DIR = SITE_DIR.parent  # корень репозитория (там леж
 # --- Название и ссылки --------------------------------------------------------
 SITE_NAME = "TrafficEye"
 TAGLINE = "Traffic event detection from a fixed road camera"
-TEAM_NAME = "TrafficEye"
+TEAM_NAME = "Air MAX"
 REPO_URL = "https://github.com/your-org/wiut-cv"  # placeholder — replace
 WEIGHTS_URL = "https://github.com/your-org/wiut-cv/releases"  # placeholder — replace
 SITE_SOURCE_URL = f"{REPO_URL}/tree/main/site"
