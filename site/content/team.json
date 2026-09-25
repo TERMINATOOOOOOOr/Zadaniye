@@ -3,10 +3,10 @@
   "members": [
     {
       "name": "Avazbek Akbaraliyev",
-      "role": "Team captain · pipeline architecture, tracking, risk estimator",
+      "role": "Team captain · scene geometry · dev review · report",
       "contributions": [
-        "Detector + ByteTrack integration, ffmpeg frame reader, time-budget engineering on 4K footage",
-        "Part B causal risk estimator (time-to-collision, braking, queue awareness), determinism and offline packaging",
+        "Scene geometry of the camera (road, crossings, islands, stop line) in the scene editor",
+        "Manual review of rule candidates on the sample videos (contact sheets), per-class threshold tuning, failure cases for the report",
         "Team coordination and communication with the organizers"
       ],
       "github": "https://github.com/akbaraliyev4realA",
@@ -15,25 +15,12 @@
       "past_projects": []
     },
     {
-      "name": "Munis Tursunov",
-      "role": "Scene geometry · event rules · dev review",
-      "contributions": [
-        "Scene geometry of the camera (road, crossings, islands, stop line) and the queue-aware rule engine",
-        "Manual review of rule candidates on the sample videos (contact sheets), per-class threshold tuning",
-        "Failure cases for the report"
-      ],
-      "github": "https://github.com/MuniS97",
-      "linkedin": "https://www.linkedin.com/in/munis-tursunov-2b9129386",
-      "portfolio": "",
-      "past_projects": []
-    },
-    {
       "name": "Xusan Mirzabayev",
-      "role": "Website, deployment, EDA",
+      "role": "Pipeline architecture · detection and tracking · event rules · risk estimator",
       "contributions": [
-        "Team website, live demo and Railway hosting",
-        "EDA of the sample videos: object counts, motion heatmaps, direction field",
-        "Results pages, technical report editing"
+        "Detector + ByteTrack integration, ffmpeg frame reader, time-budget engineering on 4K footage",
+        "Rule engine for all 14 event classes on trajectories and scene geometry (queue-aware stops, congestion, wrong way, pedestrians, collisions), segment post-processing",
+        "Part B causal risk estimator (time-to-collision, braking, queue awareness), determinism, offline packaging (Docker), tests"
       ],
       "github": "https://github.com/TERMINATOOOOOOOr",
       "linkedin": "https://www.linkedin.com/in/xusan-mirzabayev-5a3175387",
@@ -45,6 +32,19 @@
           "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"
         }
       ]
+    },
+    {
+      "name": "Munis Tursunov",
+      "role": "Website · deployment · EDA",
+      "contributions": [
+        "Team website, live demo (upload or link) and Railway hosting",
+        "EDA of the sample videos: object counts, motion heatmaps, direction field",
+        "Results pages, technical report editing"
+      ],
+      "github": "https://github.com/MuniS97",
+      "linkedin": "https://www.linkedin.com/in/munis-tursunov-2b9129386",
+      "portfolio": "",
+      "past_projects": []
     }
   ]
 }

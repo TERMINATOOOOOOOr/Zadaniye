@@ -16,7 +16,7 @@
   var extraEl = document.getElementById('job-extra');
   var resultEl = document.getElementById('job-result');
   var pollTimer = null;
-  var defaultMeta = 'up to ' + L.maxSec + ' s, up to ' + L.maxMb + ' MB';
+  var defaultMeta = 'up to ' + Math.floor(L.maxSec / 60) + ' min, up to ' + Math.floor(L.maxMb / 1024) + ' GB';
 
   function say(text) { msg.textContent = text; msg.hidden = !text; }
   function setBar(pct, stage, extra) {
@@ -62,7 +62,7 @@
     say('');
     if (!f) return say('Choose an .mp4 file');
     if (!/\.mp4$/i.test(f.name)) return say('An .mp4 file is required');
-    if (f.size > L.maxMb * 1048576) return say('File is larger than ' + L.maxMb + ' MB (' + fmtMb(f.size) + ')');
+    if (f.size > L.maxMb * 1048576) return say('File is larger than ' + Math.floor(L.maxMb / 1024) + ' GB (' + fmtMb(f.size) + ')');
     submit.disabled = true;
     probeDuration(f).then(function (d) {
       if (d && d > L.maxSec + 0.5) { submit.disabled = false; return say('Video is longer than ' + L.maxSec + ' s (' + TE.fmtTime(d) + ')'); }
