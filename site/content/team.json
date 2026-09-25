@@ -1,24 +1,18 @@
 {
-  "_comment": "Member 3 is a placeholder — replace name, links and past projects before submission.",
+  "_comment": "Add portfolio links and past projects if any.",
   "members": [
     {
-      "name": "Xusan Mirzabayev",
-      "role": "Team captain · pipeline architecture, tracking, risk estimator, deployment",
+      "name": "Avazbek Akbaraliyev",
+      "role": "Team captain · pipeline architecture, tracking, risk estimator",
       "contributions": [
         "Detector + ByteTrack integration, ffmpeg frame reader, time-budget engineering on 4K footage",
         "Part B causal risk estimator (time-to-collision, braking, queue awareness), determinism and offline packaging",
-        "Website hosting and deployment (Railway), communication with the organizers"
+        "Team coordination and communication with the organizers"
       ],
-      "github": "https://github.com/",
-      "linkedin": "",
+      "github": "https://github.com/akbaraliyev4realA",
+      "linkedin": "https://www.linkedin.com/in/avazbek-akbaraliyev-637209387",
       "portfolio": "",
-      "past_projects": [
-        {
-          "name": "WBIP — partner platform of the Assembly",
-          "url": "https://www.wbip.uz",
-          "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"
-        }
-      ]
+      "past_projects": []
     },
     {
       "name": "Munis Tursunov",
@@ -34,21 +28,21 @@
       "past_projects": []
     },
     {
-      "name": "Member 3",
-      "role": "EDA · website · presentation",
+      "name": "Xusan Mirzabayev",
+      "role": "Website, deployment, EDA",
       "contributions": [
+        "Team website, live demo and Railway hosting",
         "EDA of the sample videos: object counts, motion heatmaps, direction field",
-        "Team website content, results pages, live demo checks",
-        "Technical report and presentation"
+        "Results pages, technical report editing"
       ],
       "github": "https://github.com/",
       "linkedin": "",
       "portfolio": "",
       "past_projects": [
         {
-          "name": "Project",
-          "url": "",
-          "note": "one line about the outcome"
+          "name": "WBIP — partner platform of the Assembly",
+          "url": "https://www.wbip.uz",
+          "note": "Flask platform: organisations, trust score, deal rooms, 3 languages"
         }
       ]
     }
