@@ -1,5 +1,5 @@
 {
-  "_comment": "Members 2 and 3 are placeholders — replace name, links and past projects before submission; add GitHub/LinkedIn links for everyone.",
+  "_comment": "Member 3 is a placeholder — replace name, links and past projects before submission.",
   "members": [
     {
       "name": "Xusan Mirzabayev",
@@ -21,23 +21,17 @@
       ]
     },
     {
-      "name": "Member 2",
+      "name": "Munis Tursunov",
       "role": "Scene geometry · event rules · dev review",
       "contributions": [
         "Scene geometry of the camera (road, crossings, islands, stop line) and the queue-aware rule engine",
         "Manual review of rule candidates on the sample videos (contact sheets), per-class threshold tuning",
         "Failure cases for the report"
       ],
-      "github": "https://github.com/",
-      "linkedin": "",
+      "github": "https://github.com/MuniS97",
+      "linkedin": "https://www.linkedin.com/in/munis-tursunov-2b9129386",
       "portfolio": "",
-      "past_projects": [
-        {
-          "name": "Project",
-          "url": "",
-          "note": "one line about the outcome"
-        }
-      ]
+      "past_projects": []
     },
     {
       "name": "Member 3",
