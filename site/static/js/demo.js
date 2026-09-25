@@ -72,6 +72,11 @@
 
   var urlInput = document.getElementById('demo-url');
   var urlRun = document.getElementById('demo-url-run');
+  var urlSample = document.getElementById('demo-url-sample');
+  if (urlSample) urlSample.addEventListener('click', function () {
+    urlInput.value = location.origin + '/static/media/sample_C3905_60s.mp4';
+    urlRun.click();
+  });
   if (urlRun) urlRun.addEventListener('click', function () {
     var u = (urlInput.value || '').trim();
     say('');
