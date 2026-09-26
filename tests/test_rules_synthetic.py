@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.context import Context  # noqa: E402
 from src.flow import FlowField, StopMap  # noqa: E402
-from src.rules import collision, stopped, turns, wrong_way  # noqa: E402
+from src.rules import collision, impact, stopped, turns, wrong_way  # noqa: E402
 from src.tracking import Obs, build_tracks  # noqa: E402
 
 W, H, FPS = 1920, 1080, 25.0
@@ -198,3 +198,34 @@ def test_illegal_turn_uses_origin_lane_before_intersection():
     assert turns.run_illegal_turn(_ctx_scene(obs, right_ok)) == []
     # и разворотом это не считается
     assert turns.run_u_turn(_ctx_scene(obs, straight_only)) == []
+
+
+def _stop_profile(t0, x0, v, t_stop, brake_sec, t_end, y, step=DT):
+    """Машина едет вправо со скоростью v px/s, с t_stop тормозит до нуля за brake_sec, дальше стоит до t_end."""
+    pts = []
+    for t in np.arange(t0, t_end, step):
+        if t <= t_stop:
+            x = x0 + v * (t - t0)
+        elif t <= t_stop + brake_sec:
+            u = (t - t_stop) / brake_sec
+            x = x0 + v * (t_stop - t0) + v * brake_sec * (u - u * u / 2)   # линейное замедление
+        else:
+            x = x0 + v * (t_stop - t0) + v * brake_sec / 2
+        pts.append((t, x, y))
+    return pts
+
+
+def test_impact_abrupt_stop_next_to_vehicle_is_accident():
+    obs = _traffic()
+    # жертва стоит посреди дороги; виновник летит на 3 высоты/с и встаёт за 0.12 с вплотную к ней, оба стоят
+    obs += _obs(1, "car", [(t, 1150.0, 500.0) for t in np.arange(20.0, 40.0, DT)])
+    obs += _obs(2, "car", _stop_profile(20.0, 200.0, 240.0, 23.5, 0.12, 40.0, 500.0))
+    ivs = impact.run(_ctx(obs))
+    assert len(ivs) == 1 and abs(ivs[0][0] - 23.6) < 0.5, ivs
+
+
+def test_impact_smooth_braking_is_not_accident():
+    obs = _traffic()
+    obs += _obs(1, "car", [(t, 1150.0, 500.0) for t in np.arange(20.0, 40.0, DT)])
+    obs += _obs(2, "car", _stop_profile(20.0, 200.0, 240.0, 22.0, 1.6, 40.0, 500.0))   # плавное торможение за 1.6 с
+    assert impact.run(_ctx(obs)) == []

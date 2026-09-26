@@ -146,6 +146,7 @@ and on the hand-made scene geometry of this camera (allowed by the task).
      was fast. If the pair breaks up within 1 s after the contact (boxes merge, a track ends), the accident
      is kept only when a surviving track itself comes to rest within 2.5 s and stays at rest for 4 s; a pair
      that simply vanishes at the frame edge is not an accident.
+     A second, independent accident rule works on impact dynamics instead of pair geometry (`src/rules/impact.py`): on the raw, unsmoothed detector positions a vehicle keeps a speed of at least 1.5 box heights/s for 0.6 s, loses at least 60 % of it within 0.35 s and stays slow for 0.6 s (a braking car needs 1–3 s for the same drop), another road user is within 2 box heights at that moment, and somebody rests at that spot for at least 3 s afterwards; a track that ends at speed and is replaced by a track born stationary counts the same way. Regular stop locations are excluded, a pedestrian partner must fall or stop. The two rules are united.
    - `road_obstacle`: two sources. COCO "obstacle" classes (animals, suitcase, chair, ball) with confidence
      ≥ 0.35 on the road, and a background model (`src/static_objects.py`) for things the detector does not
      know: a slowly adapting background at 480 px; a foreground blob that persists ≥ 5 s, covers 0.02–3 % of
@@ -272,7 +273,7 @@ stopped_vehicle) was re-checked on frames with the same rules; that re-check led
   the zebra beyond the stop line for the whole red phase and pedestrians walk around them (true). Before the
   "red only from the lamp" rule C3897 produced 5 false `red_light` events from pedestrian/queue-derived red
   while the frames show green.
-- `accident` (0) / `near_miss` (0): the rule is a contact-then-stop signature. On the 960 sheets its
+- `accident` (0) / `near_miss` (0): the pair rule is a contact-then-stop signature. On the 960 sheets its
   candidates were an SUV passing pedestrians (C3897 315 s) and queue arrivals (C3905); on the 1280 run it
   first produced five more — the articulated bus stopping beside the head of the queue (C3896 124 s), two
   cars passing at the bottom-right corner of the frame with clipped boxes (C3897 217 s) and three pairs of
@@ -282,6 +283,7 @@ stopped_vehicle) was re-checked on frames with the same rules; that re-check led
   stays at rest for 4 s. With that, no accident is reported on the samples; a real collision, where both
   objects stop and stay, still passes. `near_miss` needs speed, hard braking and a swerve together and
   never fired.
+  Checked on real crashes: three compilations of Seattle traffic-camera crashes (36 minutes, roughly 40 collisions) and one Tashkent CCTV compilation from 2017. The impact rule fired 5 times: four are real collisions (a rear-end at E Marginal Way, two SUVs at Westlake, a T-bone at Rainier & Henderson, a T-bone in Tashkent) and one is a montage cut between two clips; on our four sample clips it fires 0 times. Recall on the compilations is low, about one collision in eight: many crashes there end in continued motion, or the clip is cut right after the impact, so "somebody rests at the spot for 3 s" is never observed. The old pair rule found one of those collisions. Precision is what we optimised for.
 - `wrong_way` (C3896 120.9–124.8 s) is a false positive: the articulated bus driving in the right
   direction along the median towards the stop line; the bottom of its tall box falls into the zone of the
   opposite carriageway. We left it in the output rather than tune against a single case; a lane-level zone

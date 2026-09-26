@@ -200,12 +200,28 @@ carriageway — a false positive we keep rather than tune against a single case)
 plausible true) and C3902 solid_line_crossing 1.8–3.8 s and 299.6–301.1 s (the moving queue in the first
 seconds and a large box near the left edge — unclear on frames).
 
+## Real crashes as a sanity check
+
+Our clips contain no collision, so the accident rule had never seen a positive. We took public footage of real ones: three compilations of crashes caught by Seattle traffic cameras (36 minutes, roughly 40 collisions, fixed cameras, dissolves between clips) and a Tashkent CCTV compilation from 2017. The pair rule (contact, then both objects at rest) found one collision out of all of them: on a real impact the box centres stay 0.5–0.9 box heights apart and the tracker breaks the tracks at the moment of contact, so "the same pair touched and then rested" almost never holds.
+
+That led to the second rule, which looks at impact dynamics on the raw detector positions instead of pair geometry: a sustained speed of at least 1.5 box heights/s that drops by at least 60 % within 0.35 s and stays low (braking takes 1–3 s for the same drop), another road user within 2 box heights, and somebody at rest at that spot for at least 3 s afterwards. A track that ends at speed and is replaced by one born stationary counts the same way.
+
+| Firing | Footage | Verdict |
+|---|---|---|
+| 677 s, Rainier & Henderson | Seattle #13 | true: a white SUV T-bones a dark SUV, both stop together |
+| 338 s, E Marginal Way & S Hudson | Seattle #13 | true: a taxi rear-ends a grey car |
+| 98 s, Westlake Ave | Seattle #9 | true: two SUVs collide at the crossing |
+| 61 s, Tashkent, 2017 | Tashkent CCTV | true: a white car T-bones a blue one |
+| 509 s, Alaskan Way | Seattle #9 | false: a dissolve between two clips, not a collision |
+
+Five firings, four real; zero firings on our four sample clips (checked on the 1280 px detections). Recall on the compilations stays low, about one collision in eight: many crashes there end in continued motion, or the clip is cut right after the impact, so the "rest" condition is never observed. Part B raises its alarm at the moment of impact on several of these clips (score 1.0 at Rainier and E Marginal Way) rather than five seconds before; anticipation from a fixed camera without a learned model remains the open problem.
+
 ## Limitations, honestly
 
 - **No labels.** The samples came without annotations; precision was reviewed by eye on contact sheets, recall was never measured. We know what we report is mostly plausible; we do not know what we miss.
 - **Classes never predicted on the samples**: `near_miss` (the evasive-action test is strict on purpose), `illegal_u_turn` (heading-based candidates were all id switches), `illegal_turn` (no arrows on this junction), `congestion` (the one candidate of the first submission was a queue during red; with the lamp-based signal only queues that survive a green phase count), `accident` and `road_obstacle` (every candidate on these clips was a false positive, see above), `fire_smoke` (no detector). On a hidden test from the same camera these classes are at risk of zero recall.
 - **Boundaries.** Our segments follow the annotation conventions literally, but "queue clears" or "all objects stop moving" can differ from a human annotator by a second or two — visible at IoU 0.7.
-- **The accident rule** is a contact-then-stop signature; on these clips every candidate it produced was a queue arrival, a frame-edge pair or a bus stopping beside the queue, and after the fix it reports nothing on the samples. A real collision — both objects stop and stay — would still pass, but the rule has never seen a positive here, so its recall is untested; a re-scoring model would be the next step.
+- **The accident rules** report nothing on the samples. On public crash footage the impact rule finds real collisions with four true firings out of five, but only about one collision in eight (see the sanity check above): crashes where the vehicles keep moving, or that the footage cuts away from, are missed. A re-scoring model trained on public crash datasets would be the next step.
 - **The scene is one camera.** Direction zones, solid lines and the stop line exist only for the far approach and the side street; the near carriageway has no stop line in view, so no `red_light` can be reported there.
 - **Timing** was measured on a busy laptop; the hardware of the organizers may differ, and the environment variables exist for that reason.
 

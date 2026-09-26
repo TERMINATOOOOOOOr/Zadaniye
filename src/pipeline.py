@@ -12,7 +12,7 @@ from .align import align_scene, check_lights
 from .config import Settings, seed_everything
 from .context import Context
 from .flow import FlowField, StopMap
-from .rules import collision, congestion, lines, obstacle, pedestrian, red_light, stopped, turns, wrong_way
+from .rules import collision, congestion, impact, lines, obstacle, pedestrian, red_light, stopped, turns, wrong_way
 from .scene import load_scene
 from .segments import finalize_events
 from .signal import FEATURES_VERSION, LAMP_CELL, LampReader, fuse_signals, lamp_crop_rect, signal_from_pedestrians, signal_from_traffic
@@ -176,6 +176,7 @@ def build_context(video_path: str, st: Settings, progress: Progress | None = Non
 
 def run_rules(ctx: Context) -> dict[str, list[tuple[float, float]]]:
     accidents, near = collision.run(ctx)
+    accidents = accidents + impact.run(ctx)   # парное правило и правило по точке удара дополняют друг друга
     return {
         "accident": accidents,
         "near_miss": near,
