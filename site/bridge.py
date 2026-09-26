@@ -16,6 +16,8 @@
 """
 from __future__ import annotations
 
+import os
+
 import importlib
 import importlib.util
 import inspect
@@ -244,7 +246,25 @@ def annotate(path: str | Path, events: list, out_path: str | Path, risk: list | 
 # --- полный прогон одной задачи -----------------------------------------------
 
 def run_job(job) -> dict[str, Any]:
-    """Обработчик для JobQueue: вход ``job.dir/input.mp4`` -> events.json (+ annotated.mp4)."""
+    """Обработчик для JobQueue. Короткий клип (≤ FULL_PRESET_MAX_SEC) гоняется с настройками сдачи, чтобы демо
+    показывало то же, что увидит жюри; длинный — с быстрым пресетом из переменных окружения (CPU)."""
+    meta = dict(job.meta or probe_video(job.dir / "input.mp4"))
+    full = float(meta.get("duration", 0.0)) <= config.FULL_PRESET_MAX_SEC
+    saved = {k: os.environ.get(k) for k in config.FULL_PRESET_ENV}
+    if full:
+        os.environ.update(config.FULL_PRESET_ENV)
+    try:
+        return _run_job(job)
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def _run_job(job) -> dict[str, Any]:
+    """Вход ``job.dir/input.mp4`` -> events.json (+ annotated.mp4)."""
     src = job.dir / "input.mp4"
     notes: list[str] = []
     want_risk = bool(job.options.get("risk", True))

@@ -166,8 +166,8 @@ def run(ctx: Context, queue_checks: bool = True, debug: list | None = None) -> l
             t = float(tr.t[i]); x, y = float(tr.cx[i]), float(tr.by[i])
             if x < BORDER_REL * h or x > W - BORDER_REL * h or y < BORDER_REL * h or y > H - BORDER_REL * h:
                 continue
-            if not ctx.on_road(x, y):
-                continue
+            # маску дороги не проверяем: быстрый участник сам приехал в эту точку, а на коротком клипе
+            # маска по потоку ещё не набирается (нет сцены — нет и полигона дороги)
             partner = _partner_near(ctx, tr, i, IMPACT_NEAR * h)
             if partner is None:
                 continue

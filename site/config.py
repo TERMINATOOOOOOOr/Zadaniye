@@ -39,6 +39,9 @@ JOBS_DIR = SITE_DIR / "jobs_store"  # временные файлы задач (
 JOB_TTL_SEC = 2 * 3600  # задачи старше этого удаляются
 JOB_CLEANUP_INTERVAL_SEC = 300
 RISK_FRAME_STRIDE = 4  # каждый N-й кадр идёт в RiskEstimator.step (демо на CPU)
+FULL_PRESET_MAX_SEC = 60  # клипы не длиннее этого гоняем с настройками сдачи (1280 px, каждый 3-й кадр, риск как в харнессе);
+                          # длинные — с быстрым пресетом из переменных окружения (CPU)
+FULL_PRESET_ENV = {"WIUT_IMGSZ_A": "1280", "WIUT_STRIDE_A": "3", "WIUT_IMGSZ_B": "640", "WIUT_STRIDE_B": "1"}
 ANNOTATE_MAX_SIDE = 960  # длинная сторона аннотированного видео
 API_WAIT_TIMEOUT_SEC = 900  # сколько /api/detect ждёт результат синхронно
 EXPECTED_DETECT_FACTOR = 1.0  # оценка: detect_events ~ N x длительность видео (для прогресс-бара)
