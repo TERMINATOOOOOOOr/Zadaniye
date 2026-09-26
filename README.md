@@ -239,6 +239,8 @@ python tools/make_scene_ref.py --video data/samples/C3896.MP4  # rebuild configs
 python tools/run_samples.py data/samples --team "Air MAX" --out predictions_samples.json --site
 python tools/results_table.py                                # README rows (events per clip, time budget)
 python -m pytest tests -q
+tools/strips.py VIDEO OUT --fps 1                             # thumbnail strips for frame-by-frame labelling
+tools/colab_t4_timing.ipynb                                   # time budget on a Tesla T4 (Google Colab)
 ```
 
 ## Results on the sample videos
