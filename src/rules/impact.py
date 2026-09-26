@@ -96,6 +96,50 @@ def abrupt_stops(tr: Track) -> list[int]:
     return out
 
 
+PUSH_SLOW = 1.0          # «стоял или полз»: сырая скорость не выше 1.0 высоты/с в течение HOLD_SEC до толчка
+PUSH_RATIO = 2.5         # после толчка медиана скорости хотя бы в 2.5 раза выше максимума до него
+PUSH_FAST = 1.5          # после толчка медиана сырой скорости не ниже 1.5 высоты/с в течение PUSH_HOLD_SEC
+PUSH_HOLD_SEC = 0.4
+PUSH_PARTNER_SPEED = 1.0 # толкнувший участник — машина, ехавшая быстрее 1 высоты/с перед моментом
+
+
+def abrupt_pushes(tr: Track) -> list[int]:
+    """Индексы наблюдений, где почти стоявшая машина за ≤ ABRUPT_SEC резко разгоняется: тела в покое сами так не
+    ускоряются, их толкают. Сглаженная скорость трека должна подтвердить скачок."""
+    n = len(tr.t)
+    if n < 6:
+        return []
+    h = max(tr.size, 1.0)
+    v = _raw_speed(tr)
+    t = tr.t
+    out: list[int] = []
+    last = -10.0
+    for i in range(2, n):
+        a1 = int(np.searchsorted(t, t[i] - ABRUPT_SEC, side="right")) - 1
+        if a1 < 1:
+            continue
+        a0 = int(np.searchsorted(t, t[a1] - HOLD_SEC))
+        if a1 - a0 < 2:
+            continue
+        before_max = float(v[a0:a1 + 1].max())
+        if before_max > PUSH_SLOW * h:
+            continue
+        b1 = int(np.searchsorted(t, t[i] + PUSH_HOLD_SEC, side="right"))
+        if b1 - i < 2 or t[b1 - 1] - t[i] < PUSH_HOLD_SEC * 0.6:
+            continue
+        after = v[i:b1]
+        if float(np.median(after)) < PUSH_FAST * h or float(after.min()) < 0.5 * PUSH_FAST * h:
+            continue
+        if float(np.median(after)) < PUSH_RATIO * max(before_max, 0.1 * h):
+            continue
+        if tr.speed[a0:a1 + 1].max() > 1.0 * h or tr.speed[i:b1].max() < 1.0 * h:
+            continue
+        if t[i] - last > 2.0:
+            out.append(i)
+            last = float(t[i])
+    return out
+
+
 def _partner_near(ctx: Context, tr: Track, i: int, radius: float) -> Track | None:
     t = float(tr.t[i]); x, y = float(tr.cx[i]), float(tr.by[i])
     best, best_d = None, None
@@ -109,9 +153,14 @@ def _partner_near(ctx: Context, tr: Track, i: int, radius: float) -> Track | Non
     return best
 
 
+END_REST_SEC = 1.5       # удар в конце записи: покой до последнего кадра засчитывается, если длится хотя бы столько
+
+
 def _rest_near(ctx: Context, x: float, y: float, t0: float, t1: float, radius: float, min_sec: float) -> tuple[float, float] | None:
-    """Кто-нибудь стоит у точки (x, y) внутри [t0, t1] не меньше min_sec подряд → (начало, конец) покоя."""
+    """Кто-нибудь стоит у точки (x, y) внутри [t0, t1] не меньше min_sec подряд → (начало, конец) покоя.
+    Если запись кончается раньше, чем набралось min_sec, достаточно END_REST_SEC покоя до последнего кадра."""
     best = None
+    t_end = float(ctx.meta.get("duration", 0.0)) or float(max(o.t1 for o in ctx.tracks.values())) if ctx.tracks else 0.0
     for o in ctx.tracks.values():
         if o.kind not in ("vehicle", "person", "rider") or o.t1 < t0 or o.t0 > t1:
             continue
@@ -128,7 +177,8 @@ def _rest_near(ctx: Context, x: float, y: float, t0: float, t1: float, radius: f
                 start = k
             if not cur and start is not None:
                 a, b = float(o.t[lo + start]), float(o.t[lo + k - 1])
-                if b - a >= min_sec and (best is None or a < best[0]):
+                enough = b - a >= min_sec or (b - a >= END_REST_SEC and b >= t_end - 0.7 and lo + k - 1 == len(o.t) - 1)
+                if enough and (best is None or a < best[0]):
                     best = (a, b)
                 start = None
     return best
@@ -147,7 +197,7 @@ def _successor_born_still(ctx: Context, tr: Track) -> bool:
 
 
 def candidates(ctx: Context, tr: Track) -> list[tuple[int, str]]:
-    out = [(i, "drop") for i in abrupt_stops(tr)]
+    out = [(i, "drop") for i in abrupt_stops(tr)] + [(i, "push") for i in abrupt_pushes(tr)]
     h = max(tr.size, 1.0)
     n = len(tr.t)
     v = _raw_speed(tr)
@@ -171,6 +221,13 @@ def run(ctx: Context, queue_checks: bool = True, debug: list | None = None) -> l
             partner = _partner_near(ctx, tr, i, IMPACT_NEAR * h)
             if partner is None:
                 continue
+            if kind == "push":
+                # толкнуть может только машина, которая перед этим ехала
+                if partner.kind != "vehicle":
+                    continue
+                j = partner.index_at(t - 0.3)
+                if float(partner.speed[max(0, j - 2):j + 1].max()) < PUSH_PARTNER_SPEED * max(partner.size, 1.0):
+                    continue
             if partner.kind != "vehicle":
                 j = partner.index_at(t)
                 fell = partner.t1 - t < 1.5 or bool((partner.speed[j:] < REST_REL * max(partner.size, 1.0)).any())
