@@ -25,6 +25,8 @@ TEMPLATES_DIR = SITE_DIR / "templates"
 EDA_JSON = STATIC_DIR / "eda" / "eda.json"
 RESULTS_JSON = STATIC_DIR / "results" / "results.json"
 EXAMPLES_DIR = STATIC_DIR / "results" / "examples"
+ABLATION_JSON = STATIC_DIR / "results" / "ablation.json"  # таблица абляций на странице Results
+ANALYSIS_JSON = STATIC_DIR / "analysis" / "analysis.json"  # разбор ошибок: контакт-листы + вердикты
 # аннотированные ролики: корневой .gitignore не коммитит *.mp4, кроме site/static/media/*.mp4,
 # поэтому ожидаем их здесь; results.json может и явно указать путь (относительно site/static/)
 MEDIA_DIR = STATIC_DIR / "media"
@@ -70,6 +72,8 @@ NAV: list[tuple[str, str]] = [
     ("/approach", "Approach"),
     ("/eda", "EDA"),
     ("/results", "Results"),
+    ("/analysis", "Analysis"),
+    ("/dashboard", "Dashboard"),
     ("/demo", "Demo"),
     ("/report", "Report"),
     ("/links", "Links"),

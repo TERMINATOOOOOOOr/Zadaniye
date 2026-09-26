@@ -1,0 +1,19 @@
+{
+  "note": "Part A + Part B measured with the organizers' harness (all decoding included), fp16, nothing else running. total_x_duration = (part_a_sec + part_b_sec) / video duration; the limit is 3x.",
+  "rows": [
+    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3896.MP4", "duration_sec": 340.3, "part_a_sec": 99, "part_b_sec": 242, "total_x_duration": 1.00,
+     "events_per_class": {"jaywalking": 19, "failure_to_yield": 5}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
+    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3897.MP4", "duration_sec": 317.8, "part_a_sec": 93, "part_b_sec": 215, "total_x_duration": 0.97,
+     "events_per_class": {"jaywalking": 21, "failure_to_yield": 7, "stopped_vehicle": 1, "accident": 1}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
+    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3902.MP4", "duration_sec": 317.8, "part_a_sec": 99, "part_b_sec": 215, "total_x_duration": 0.99,
+     "events_per_class": {"jaywalking": 19, "failure_to_yield": 3, "stopped_vehicle": 2}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
+    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3905.MP4", "duration_sec": 127.6, "part_a_sec": 39, "part_b_sec": 72, "total_x_duration": 0.87,
+     "events_per_class": {"jaywalking": 7, "failure_to_yield": 2, "stopped_vehicle": 1, "congestion": 1}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
+    {"config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
+     "events_per_class": {}, "notes": "larger input for Part A; to be measured", "status": "pending"},
+    {"config": "YOLO11s 960 stride 2 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
+     "events_per_class": {}, "notes": "denser sampling for Part A; to be measured", "status": "pending"},
+    {"config": "YOLO11n 960 stride 3 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
+     "events_per_class": {}, "notes": "smaller detector for Part A; to be measured", "status": "pending"}
+  ]
+}

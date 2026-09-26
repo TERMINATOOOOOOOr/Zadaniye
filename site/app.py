@@ -36,6 +36,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa
 import config  # noqa: E402
 import mdlite  # noqa: E402
 import bridge  # noqa: E402  — обёртки над solution.py / src.render (ленивые импорты)
+import dashboard  # noqa: E402
 from jobs import Job, JobQueue  # noqa: E402
 import fetch  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
@@ -47,6 +48,8 @@ MAX_BYTES = config.MAX_UPLOAD_MB * 1024 * 1024
 CHUNK = 1 << 20
 JOB_ID_RE = re.compile(r"^[0-9a-f]{6,32}$")
 JOB_FILES = {"annotated.mp4": "video/mp4", "input.mp4": "video/mp4", "events.json": "application/json"}
+VERDICT_LABELS = {"true_positive": "true positive", "false_positive": "false positive", "unclear": "unclear"}
+ABLATION_STATUSES = ("measured", "pending")
 
 FAVICON_SVG = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>"
@@ -155,7 +158,8 @@ def find_annotated(video_name: str | None, given: str | None) -> str | None:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return render(request, "index.html", avail=bridge.availability(),
-                  has_results=config.RESULTS_JSON.exists(), has_eda=config.EDA_JSON.exists())
+                  has_results=config.RESULTS_JSON.exists(), has_eda=config.EDA_JSON.exists(),
+                  max_mb=config.MAX_UPLOAD_MB, max_sec=config.MAX_DURATION_SEC)
 
 
 @app.get("/team", response_class=HTMLResponse)
@@ -213,7 +217,62 @@ async def results(request: Request):
             cls = next((c for c in config.CLASSES if p.stem.lower().startswith(c)), None)
             examples.append({"url": f"/static/results/examples/{p.name}", "name": p.stem, "cls": cls})
     return render(request, "results.html", videos=videos, failures=failures, examples=examples,
-                  error=error, present=data is not None)
+                  error=error, present=data is not None, ablation=load_ablation())
+
+
+def load_ablation() -> dict[str, Any]:
+    """Таблица абляций для страницы Results: строки со status measured/pending (pending рисуются серым)."""
+    data = read_json(config.ABLATION_JSON)
+    if data is None:
+        return {"present": False, "rows": [], "note": "", "error": None}
+    if isinstance(data, dict) and "__error__" in data:
+        return {"present": True, "rows": [], "note": "", "error": data["__error__"]}
+    rows = []
+    for r in (data.get("rows") if isinstance(data, dict) else data) or []:
+        if not isinstance(r, dict):
+            continue
+        status = r.get("status") if r.get("status") in ABLATION_STATUSES else "pending"
+        epc = r.get("events_per_class") or {}
+        rows.append({
+            "config": r.get("config", "—"), "video": r.get("video", "—"), "status": status,
+            "duration_sec": r.get("duration_sec"), "part_a_sec": r.get("part_a_sec"), "part_b_sec": r.get("part_b_sec"),
+            "total_x_duration": r.get("total_x_duration"), "notes": r.get("notes", ""),
+            "events_per_class": [(c, epc[c]) for c in config.CLASSES if c in epc]
+            + sorted((c, n) for c, n in epc.items() if c not in config.CLASSES),
+        })
+    return {"present": True, "rows": rows, "note": (data.get("note", "") if isinstance(data, dict) else ""), "error": None}
+
+
+@app.get("/analysis", response_class=HTMLResponse)
+async def analysis(request: Request):
+    """Разбор ошибок: контакт-листы кандидатов с вердиктом и выводом."""
+    data = read_json(config.ANALYSIS_JSON)
+    error = data.get("__error__") if isinstance(data, dict) else None
+    raw = [] if (data is None or error) else list(data.get("entries", []) if isinstance(data, dict) else data)
+    entries = []
+    for i, e in enumerate(raw):
+        if not isinstance(e, dict) or not e.get("image"):
+            continue
+        verdict = e.get("verdict") if e.get("verdict") in VERDICT_LABELS else "unclear"
+        t = e.get("t")
+        entries.append({
+            "id": f"sheet-{i + 1}", "url": static_url(e["image"]), "cls": e.get("cls", "—"), "video": e.get("video", "—"),
+            "t": float(t) if isinstance(t, (int, float)) else None, "verdict": verdict,
+            "why": e.get("why", ""), "learned": e.get("learned", ""), "in_output": bool(e.get("in_output")),
+        })
+    counts = {k: sum(1 for e in entries if e["verdict"] == k) for k in VERDICT_LABELS}
+    return render(request, "analysis.html", entries=entries, counts=counts, verdict_labels=VERDICT_LABELS,
+                  in_output=sum(1 for e in entries if e["in_output"]), error=error, present=data is not None,
+                  how_to_read=(data.get("how_to_read", "") if isinstance(data, dict) else ""))
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    """Операторская панель: события по минутам, итоги по классам, полосы времени, тревоги риска."""
+    data = read_json(config.RESULTS_JSON)
+    error = data.get("__error__") if isinstance(data, dict) else None
+    dash = dashboard.build(data if (isinstance(data, dict) and not error) else {})
+    return render(request, "dashboard.html", dash=dash, error=error, present=data is not None)
 
 
 @app.get("/demo", response_class=HTMLResponse)

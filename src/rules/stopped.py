@@ -11,9 +11,13 @@ QUEUE_RADIUS = 2.5         # сосед на расстоянии < 2.5 высо
 MIN_STOP_SEC = 10.0
 BUS_LONG_SEC = 60.0        # автобус на остановке стоит штатно; событие только если дольше минуты
 HOTSPOT_LONG_SEC = 90.0    # в точке штатных остановок (светофор) событие только если стоит дольше цикла
+CROSSWALK_WAIT_REL = 2.5   # стоит ближе 2.5 высот к зебре — пропускает пешеходов / ждёт свой сигнал, не событие
+RED_OVERLAP = 0.6          # стоянка выше стоп-линии, из которой ≥ 60 % пришлось на красный, — очередь
+APPROACH_DEPTH_REL = 40.0  # зона подъезда к стоп-линии: до 40 высот бокса выше линии
 
 
-def run(ctx: Context) -> list[tuple[float, float]]:
+def run(ctx: Context, debug: list | None = None) -> list[tuple[float, float]]:
+    """debug — если передан список, в него попадают (id трека, начало, конец) каждого события."""
     vehicles = ctx.vehicles()
     stopped_ivs: dict[int, list[tuple[float, float]]] = {}
     for tr in vehicles:
@@ -35,9 +39,14 @@ def run(ctx: Context) -> list[tuple[float, float]]:
                 continue
             i = tr.index_at((s + e) / 2)
             if e - s < HOTSPOT_LONG_SEC and (ctx.is_stop_hotspot(tr.cx[i], tr.by[i])
-                                             or ctx.in_queue(tr.cx[i], tr.by[i], s + 2.0, tr.size, exclude=tr.id)):
+                                             or any(ctx.in_queue(tr.cx[i], tr.by[i], tq, tr.size, exclude=tr.id)
+                                                    for tq in (s + 2.0, (s + e) / 2, max(s + 2.0, e - 2.0)))):
+                continue
+            if _waiting_at_crosswalk(ctx, tr, i):
                 continue
             out.append((s, e))
+            if debug is not None:
+                debug.append((tr.id, s, e))
     return out
 
 
@@ -60,19 +69,38 @@ def _in_queue(ctx: Context, tr, s: float, e: float, stopped_ivs) -> bool:
 
 
 def _signal_queue(ctx: Context, tr, s: float, e: float) -> bool:
-    """Стоит перед стоп-линией на красный: не нарушение. Работает, если размечены стоп-линии и виден светофор."""
-    if ctx.scene is None or not ctx.scene.has_stop_lines() or ctx.signal is None:
+    """Стоит выше стоп-линии, пока горит красный (или почти весь интервал стоянки красный): очередь, не нарушение.
+    Глубина очереди на этой камере — десятки высот бокса, поэтому берётся вся зона подъезда."""
+    if ctx.scene is None or not ctx.scene.has_stop_lines() or ctx.signal is None or not len(ctx.signal.t):
         return False
+    from ..signal import stop_line_offset
     i = tr.index_at((s + e) / 2)
     x, y = tr.cx[i], tr.by[i]
     for sl in ctx.scene.stop_lines:
-        # точка «перед» линией по направлению подъезда и недалеко от неё
-        mid = (sl.p1 + sl.p2) / 2
-        along = float(np.dot(np.array([x, y]) - mid, sl.approach))
-        dist_line = abs(_dist_to_segment(x, y, sl.p1, sl.p2))
-        if -8 * tr.size < along < 0.5 * tr.size and dist_line < 8 * tr.size:
-            if ctx.signal.at(s + 1.0) == "red":
-                return True
+        off = stop_line_offset(sl, x, y)           # < 0 — выше линии (ещё не пересёк)
+        if not (-APPROACH_DEPTH_REL * tr.size < off < 0.5 * tr.size):
+            continue
+        # в створе линии с запасом: очередь занимает и полосы, которые линия не покрывает точно
+        ab = sl.p2 - sl.p1
+        u = float(np.dot(np.array([x, y]) - sl.p1, ab) / (float(np.dot(ab, ab)) or 1e-9))
+        if not (-0.6 <= u <= 1.6):
+            continue
+        ts = np.arange(s, e, 0.5)
+        red = float(np.mean([ctx.signal.at(float(t)) == "red" for t in ts])) if len(ts) else 0.0
+        if red >= RED_OVERLAP or ctx.signal.at(s + 1.0) == "red":
+            return True
+    return False
+
+
+def _waiting_at_crosswalk(ctx: Context, tr, i: int) -> bool:
+    """Стоит вплотную к зебре (ближе CROSSWALK_WAIT_REL высот): пропускает пешеходов или ждёт свой сигнал."""
+    if ctx.scene is None or not ctx.scene.has_crosswalks():
+        return False
+    import cv2
+    x, y = float(tr.cx[i]), float(tr.by[i])
+    for _, poly in ctx.scene.crosswalks:
+        if cv2.pointPolygonTest(poly, (x, y), True) >= -CROSSWALK_WAIT_REL * tr.size:
+            return True
     return False
 
 

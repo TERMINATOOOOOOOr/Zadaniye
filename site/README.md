@@ -1,6 +1,6 @@
 # Team website (site/)
 
-FastAPI + Jinja2, no external CDNs. Pages: `/` `/team` `/approach` `/eda` `/results` `/demo` `/report` `/links`;
+FastAPI + Jinja2, no external CDNs. Pages: `/` `/team` `/approach` `/eda` `/results` `/analysis` `/dashboard` `/demo` `/report` `/links`;
 service routes: `/healthz`, `/api/detect`, `/api/jobs/{id}`, `/api/classes`, `/api/openapi.json` (Swagger UI is
 disabled on purpose — it loads scripts from a CDN).
 
@@ -30,6 +30,9 @@ the demo. Without them `/demo` says so honestly and `/healthz` reports what was 
 | Approach, report | `site/content/approach.md`, `site/content/report.md` (Markdown) |
 | EDA | `site/static/eda/eda.json` + images next to it |
 | Results | `site/static/results/results.json`, `site/static/results/examples/*.jpg` |
+| Ablations (on Results) | `site/static/results/ablation.json` — rows `{config, video, part_a_sec, part_b_sec, total_x_duration, events_per_class, notes, status}`; `status: pending` rows render greyed out |
+| Error analysis | `site/static/analysis/analysis.json` (`entries[]` with `image, cls, video, t, verdict, why, learned, in_output`; verdict is `true_positive` / `false_positive` / `unclear`) + contact sheets next to it (≤ 1400 px wide, ≤ 300 KB) |
+| Dashboard | computed from `results.json` by `site/dashboard.py` (events per minute, totals per class, timeline strips, alarm runs with risk ≥ 0.5); inline SVG, no scripts |
 | Annotated clips | `site/static/media/<name>_annotated.mp4` (see below) |
 | Class colours | `CLASS_INFO` in `site/config.py` (feeds both the CSS variables and the JS map) |
 
@@ -64,7 +67,7 @@ extension. Videos must be H.264 `.mp4` for the browser.
 
 ## Demo and API
 
-- `/demo` form: `.mp4`, ≤ 2 min, ≤ 200 MB (enforced server-side: size while streaming, duration via OpenCV).
+- `/demo` form: `.mp4`, up to `MAX_DURATION_SEC` / `MAX_UPLOAD_MB` from `site/config.py` (10 minutes / 10 GB at the moment; enforced server-side: size while streaming, duration via OpenCV, and in the browser before the upload starts).
 - In-process queue: one job at a time, states `queued / running / done / error`, progress 0–100.
   If `detect_events` accepts `progress_cb=`, Part A progress comes from there; otherwise it is estimated from elapsed time.
 - Job files live in `site/jobs_store/<id>/` (input.mp4, annotated.mp4, events.json) and are deleted after 2 hours.

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Operator dashboard</h1>
+<p class="muted">What an operator would see after a batch run: events per minute, totals per class across clips, a compact timeline per clip and the risk alarms (score ≥ {{ '%.1f'|format(dash.threshold) }}). Everything is computed from <code>site/static/results/results.json</code> and drawn as inline SVG — no scripts.</p>
+
+{% if error %}
+<p class="note warn">results.json could not be read: {{ error }}</p>
+{% elif not present %}
+<div class="note empty">
+  <h3>Data will appear after the run</h3>
+  <p>Put <code>results.json</code> into <code>site/static/results/</code> — the dashboard assembles itself.</p>
+</div>
+{% elif not dash.videos %}
+<p class="note">results.json contains no videos yet.</p>
+{% endif %}
+
+{% if dash.videos %}
+<section class="card block">
+  <h2>Totals per class</h2>
+  <div class="table-scroll">
+    <table class="totals">
+      <thead><tr><th>class</th>{% for n in dash.totals.videos %}<th class="num-h">{{ n }}</th>{% endfor %}<th class="num-h">total</th><th class="num-h">time</th></tr></thead>
+      <tbody>
+      {% for r in dash.totals.rows %}
+      <tr><td><span class="badge" style="--c: var(--c-{{ r.cls }})">{{ r.cls }}</span></td>{% for c in r.counts %}<td class="num">{{ c or '·' }}</td>{% endfor %}<td class="num"><b>{{ r.total }}</b></td><td class="num">{{ '%.0f'|format(r.seconds) }} s</td></tr>
+      {% else %}
+      <tr><td class="muted" colspan="{{ dash.totals.videos|length + 3 }}">no events</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if dash.totals.rows %}
+      <tfoot><tr><th>all</th>{% for c in dash.totals.col_totals %}<td class="num">{{ c }}</td>{% endfor %}<td class="num"><b>{{ dash.totals.grand_total }}</b></td><td></td></tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+</section>
+
+{% for v in dash.videos %}
+<section class="card block dash-video">
+  <h2>{{ v.name }}</h2>
+  <p class="muted small">duration {{ v.duration|fmt_time }} · {{ v.n_events }} events · alarms: {{ v.alarms.count }} run{{ '' if v.alarms.count == 1 else 's' }}, {{ '%.1f'|format(v.alarms.total_sec) }} s in total, {{ '%.1f'|format(100 * v.alarms.share) }} % of samples</p>
+
+  <h3>Events per minute</h3>
+  {% set ch = v.chart %}
+  <div class="svg-box">
+    <svg class="svg-chart" viewBox="0 0 {{ ch.w }} {{ ch.h }}" role="img" aria-label="Events per minute in {{ v.name }}, stacked by class">
+      {% for t in ch.yticks %}
+      <line x1="{{ ch.x0 }}" x2="{{ ch.x1 }}" y1="{{ t.y }}" y2="{{ t.y }}" class="grid"/>
+      <text x="{{ ch.x0 - 6 }}" y="{{ t.y }}" class="tick" text-anchor="end" dominant-baseline="middle">{{ t.v }}</text>
+      {% endfor %}
+      {% for t in ch.xticks %}
+      <text x="{{ t.x }}" y="{{ ch.h - 8 }}" class="tick" text-anchor="middle">{{ t.label }}</text>
+      {% endfor %}
+      {% for r in ch.rects %}
+      <rect x="{{ r.x }}" y="{{ r.y }}" width="{{ r.w }}" height="{{ r.h }}" fill="var(--c-{{ r.cls }})" rx="1"><title>{{ r.title }}</title></rect>
+      {% endfor %}
+      {% if not ch.rects %}<text x="{{ ch.x0 + 8 }}" y="{{ ch.y0 + 16 }}" class="tick">no events</text>{% endif %}
+    </svg>
+  </div>
+  <div class="chips small">
+    {% for c in v.per_minute.classes %}<span class="badge" style="--c: var(--c-{{ c }})">{{ c }}</span>{% endfor %}
+  </div>
+
+  <h3>Timeline</h3>
+  {% set st = v.strip %}
+  <div class="svg-box">
+    <svg class="svg-strip" viewBox="0 0 {{ st.w }} {{ st.h }}" role="img" aria-label="Timeline of events in {{ v.name }}">
+      {% for lane in st.lanes %}
+      <rect x="0" y="{{ loop.index0 * st.lane_h }}" width="{{ st.w }}" height="{{ st.lane_h }}" class="lane {{ 'odd' if loop.index0 % 2 else '' }}"/>
+      <circle cx="9" cy="{{ loop.index0 * st.lane_h + st.lane_h / 2 }}" r="3" fill="var(--c-{{ lane }})"/>
+      <text x="18" y="{{ loop.index0 * st.lane_h + st.lane_h / 2 }}" class="lane-label" dominant-baseline="middle">{{ lane }}</text>
+      {% else %}
+      <text x="12" y="{{ st.lane_h / 2 }}" class="tick" dominant-baseline="middle">no events</text>
+      {% endfor %}
+      <line x1="{{ st.x0 }}" x2="{{ st.x1 }}" y1="{{ st.axis_y + 0.5 }}" y2="{{ st.axis_y + 0.5 }}" class="axis"/>
+      {% for t in st.ticks %}
+      <line x1="{{ t.x }}" x2="{{ t.x }}" y1="{{ st.axis_y }}" y2="{{ st.axis_y + 4 }}" class="axis"/>
+      <text x="{{ t.x }}" y="{{ st.axis_y + 15 }}" class="tick" text-anchor="middle">{{ t.label }}</text>
+      {% endfor %}
+      {% for s in st.segs %}
+      <rect x="{{ s.x }}" y="{{ s.y }}" width="{{ s.w }}" height="{{ s.h }}" fill="var(--c-{{ s.cls }})" rx="2"><title>{{ s.title }}</title></rect>
+      {% endfor %}
+    </svg>
+  </div>
+
+  <h3>Risk alarms</h3>
+  {% if v.alarms.samples == 0 %}
+  <p class="muted small">no risk curve available</p>
+  {% elif v.alarms.count == 0 %}
+  <p class="muted small">no sample reached {{ '%.1f'|format(dash.threshold) }} ({{ v.alarms.samples }} samples)</p>
+  {% else %}
+  <div class="table-scroll">
+    <table class="alarms">
+      <thead><tr><th>#</th><th>start</th><th>end</th><th>length</th><th>peak</th></tr></thead>
+      <tbody>
+      {% for r in v.alarms.runs %}
+      <tr><td class="num">{{ loop.index }}</td><td class="num">{{ r.start|fmt_time }}</td><td class="num">{{ r.end|fmt_time }}</td><td class="num">{{ '%.1f'|format(r.length) }} s</td><td class="num">{{ '%.2f'|format(r.peak) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small">Run = consecutive risk samples ≥ {{ '%.1f'|format(dash.threshold) }}; length includes one sample step ({{ '%.2f'|format(v.alarms.dt) }} s). Longest run {{ '%.1f'|format(v.alarms.longest_sec) }} s.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endif %}
+{% endblock %}

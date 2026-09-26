@@ -179,3 +179,44 @@ video { width: 100%; max-height: 70vh; background: #000; border-radius: var(--ra
 .progress { height: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
 .progress-bar { height: 100%; background: var(--accent); width: 0; transition: width 0.4s ease; }
 .job-status { margin-top: 14px; }
+
+/* --- разбор ошибок (/analysis) --- */
+.verdict-summary { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 8px 0 18px; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.82rem; border: 1px solid var(--border); color: var(--text-2); white-space: nowrap; }
+.verdict::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.verdict.true_positive { border-color: var(--ok); color: var(--ok); }
+.verdict.true_positive::before { background: var(--ok); }
+.verdict.false_positive { border-color: var(--bad); color: var(--bad); }
+.verdict.false_positive::before { background: var(--bad); }
+.verdict.unclear { border-color: var(--warn); color: var(--warn); }
+.verdict.unclear::before { background: var(--warn); }
+.analysis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+@media (max-width: 720px) { .analysis-grid { grid-template-columns: 1fr; } }
+.analysis-card { padding: 0; overflow: hidden; }
+.analysis-card img { display: block; width: 100%; height: auto; border-bottom: 1px solid var(--border); background: #000; }
+.analysis-card .analysis-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px 0; }
+.analysis-card h4 { padding: 0 16px; margin-top: 12px; }
+.analysis-card p { padding: 0 16px; margin: 4px 0 12px; color: var(--text-2); font-size: 0.95rem; }
+
+/* --- операторская панель (/dashboard): inline-SVG --- */
+.svg-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.svg-chart, .svg-strip { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--sans); }  /* на телефоне прокручивается внутри рамки, подписи остаются читаемыми */
+.svg-chart .grid { stroke: var(--border); stroke-width: 1; }
+.svg-chart .tick, .svg-strip .tick { fill: var(--muted); font-size: 11px; }
+.svg-strip .lane { fill: transparent; }
+.svg-strip .lane.odd { fill: rgba(255, 255, 255, 0.025); }
+.svg-strip .lane-label { fill: var(--text); font-size: 11px; font-family: var(--mono); }
+.svg-strip .axis { stroke: var(--border); stroke-width: 1; }
+.svg-chart rect:hover, .svg-strip rect[fill]:hover { opacity: 0.8; }
+th.num-h { text-align: right; }
+table.totals td.num { text-align: right; }
+table.totals tfoot th, table.totals tfoot td { border-top: 2px solid var(--border); border-bottom: 0; }
+.dash-video .chips { margin-top: 8px; }
+
+/* --- абляции на Results: незамеренные строки серые --- */
+table.ablation tr.pending td { color: var(--muted); }
+table.ablation tr.pending .badge { opacity: 0.5; }
+table.ablation tr.pending { background: rgba(255, 255, 255, 0.015); }
+.status { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; border: 1px solid var(--border); color: var(--text-2); }
+.status.measured { border-color: var(--ok); color: var(--ok); }
+.status.pending { border-color: var(--border); color: var(--muted); }

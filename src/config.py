@@ -47,7 +47,7 @@ class Settings:
         # Part A
         self.model_a = os.getenv("WIUT_MODEL_A", "yolo11s.pt")
         self.stride_a = _env_int("WIUT_STRIDE_A", 3)          # каждый 3-й кадр (8,3 к/с при 25 fps)
-        self.imgsz_a = _env_int("WIUT_IMGSZ_A", 960)          # длинная сторона кадра для детектора
+        self.imgsz_a = _env_int("WIUT_IMGSZ_A", 1280)         # длинная сторона кадра для детектора: 1280 ловит дальних пешеходов (+60 % треков против 960) за +0,1× времени
         self.conf = _env_float("WIUT_CONF", 0.15)     # ниже обычного: ByteTrack сам делит детекции на уверенные и слабые
         self.iou = _env_float("WIUT_IOU", 0.5)
         # Part B

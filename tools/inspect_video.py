@@ -36,8 +36,18 @@ def main() -> None:
     fa = ctx.flow.to_arrays()
     strong = (fa["consensus"] > 0.75) & (fa["count"] >= 5)
     print(f"flow: cell={fa['cell']} px, road cells={int(fa['road_mask'].sum())}, cells with clear direction={int(strong.sum())}")
+    al = m.get("align") or {}
+    if al:
+        tr = al.get("transform") or {}
+        lights = al.get("lights") or {}
+        after = [r.get("residual_px") for r in (lights.get("after") or [])]
+        print(f"align: {'applied' if al.get('applied') else 'REJECTED'} ({al.get('reason')}), inliers={al.get('n_inliers')}, "
+              f"shift=({tr.get('tx', 0):.0f}, {tr.get('ty', 0):.0f}) px, scale={tr.get('scale', 1):.3f}, light residuals after={after}")
     if ctx.signal is not None:
-        print(f"signal: {Counter(ctx.signal.state)}")
+        print(f"signal: origin={ctx.signal.origin} reliable={ctx.signal.reliable} ({ctx.signal.note}); {Counter(ctx.signal.state)}")
+        print("  phases: " + ", ".join(f"{s} {a:.0f}-{b:.0f}" for s, a, b in ctx.signal.runs() if s != "unknown"))
+    if ctx.static_objects:
+        print(f"static objects: {len(ctx.static_objects)} " + ", ".join(f"[{o.t0:.0f}-{o.t1:.0f} @{o.cx:.0f},{o.cy:.0f}]" for o in ctx.static_objects[:6]))
     if ctx.scene is None:
         print("scene: нет (configs/scene.json отсутствует) — правила на переходах/стоп-линиях/сплошных выключены")
     else:

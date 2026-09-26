@@ -1,0 +1,76 @@
+# Continuous integration: unit tests, format check of the shipped predictions and a determinism smoke run
+# of the organizers' harness on a synthetic clip. Everything after "pip install" runs without network access:
+# the weights are in the repository, ultralytics is kept offline and a dead proxy makes any download fail fast.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  YOLO_OFFLINE: "1"
+  YOLO_CONFIG_DIR: /tmp/yolo-config
+  WIUT_DEVICE: cpu
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install CPU-only torch and torchvision
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            "torch>=2.4,!=2.4.0,<2.12" "torchvision>=0.19,<0.27"
+
+      - name: Install requirements
+        run: python -m pip install -r requirements.txt
+
+      - name: Versions
+        run: |
+          python -c "import torch, torchvision, ultralytics, cv2, numpy; print('torch', torch.__version__, 'torchvision', torchvision.__version__, 'ultralytics', ultralytics.__version__, 'cv2', cv2.__version__, 'numpy', numpy.__version__)"
+          python -c "import imageio_ffmpeg; print('ffmpeg', imageio_ffmpeg.get_ffmpeg_exe())"
+          mkdir -p "$YOLO_CONFIG_DIR"
+          ls -la weights/
+
+      # From here on no step may touch the network: YOLO_OFFLINE (above) disables the ultralytics checks
+      # and the proxy variables point every HTTP client at a closed local port, so a download fails fast.
+      - name: Unit tests
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+        run: python -m pytest tests -q
+
+      - name: Validate the shipped sample predictions
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+        run: python evaluate.py --pred predictions_samples.json --validate-only
+
+      - name: Determinism smoke test (synthetic clip, harness run twice)
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+        run: |
+          SMOKE="$RUNNER_TEMP/smoke"
+          mkdir -p "$SMOKE/clip"
+          python tools/ci_smoke.py make-video "$SMOKE/clip/synthetic.mp4"
+          python run_submission.py --videos "$SMOKE/clip" --out "$SMOKE/a.json" --team ci --time-factor 60
+          python run_submission.py --videos "$SMOKE/clip" --out "$SMOKE/b.json" --team ci --time-factor 60
+          python tools/ci_smoke.py compare "$SMOKE/a.json" "$SMOKE/b.json"

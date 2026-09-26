@@ -12,16 +12,42 @@ from .tracking import Track
 
 @dataclass
 class SignalTrack:
-    """Состояние светофора по времени: 'red' | 'green' | 'amber' | 'unknown'."""
+    """Состояние светофора по времени: 'red' | 'green' | 'amber' | 'unknown'.
+
+    source — откуда взято состояние в каждой точке ('lamp' | 'ped' | 'traffic' | ''), origin — какой источник
+    выиграл при слиянии, reliable — есть хотя бы одна фаза красного и одна зелёного правдоподобной длины
+    (без этого правила red_light/stop_line молчат), note — почему принято такое решение (для отчёта)."""
 
     t: np.ndarray = field(default_factory=lambda: np.zeros(0))
     state: list[str] = field(default_factory=list)
+    source: list[str] = field(default_factory=list)
+    origin: str = ""
+    reliable: bool = False
+    note: str = ""
+
+    def _index(self, t: float) -> int:
+        return int(np.clip(np.searchsorted(self.t, t), 0, len(self.t) - 1))
 
     def at(self, t: float) -> str:
         if len(self.t) == 0:
             return "unknown"
-        i = int(np.clip(np.searchsorted(self.t, t), 0, len(self.t) - 1))
-        return self.state[i]
+        return self.state[self._index(t)]
+
+    def source_at(self, t: float) -> str:
+        if len(self.t) == 0 or not self.source:
+            return ""
+        return self.source[self._index(t)]
+
+    def runs(self) -> list[tuple[str, float, float]]:
+        """Непрерывные участки одного состояния (включая 'unknown'): (состояние, начало, конец)."""
+        out: list[list] = []
+        for i, s in enumerate(self.state):
+            t = float(self.t[i])
+            if out and out[-1][0] == s:
+                out[-1][2] = t
+            else:
+                out.append([s, t, t])
+        return [(s, a, b) for s, a, b in out]
 
     def intervals(self, which: str) -> list[tuple[float, float]]:
         out, start = [], None
@@ -43,9 +69,11 @@ class Context:
     meta: dict
     scene: Scene | None
     flow: FlowField
-    signal: SignalTrack | None = None
+    signal: SignalTrack | None = None       # слитое состояние (см. signal.fuse_signals), им пользуются правила
     stops: StopMap | None = None
-    signal_roi: SignalTrack | None = None   # состояние по цвету лампы (только для EDA)
+    signal_roi: SignalTrack | None = None   # состояние по цвету лампы (для EDA и отчёта)
+    signal_ped: SignalTrack | None = None   # состояние по пешеходным фазам (для отчёта)
+    static_objects: list = field(default_factory=list)   # статические объекты на дороге (src/static_objects.py)
 
     @property
     def duration(self) -> float:
@@ -68,7 +96,7 @@ class Context:
             ln = self.scene.lane_at(x, y)
             if ln is not None and ln.direction.any():
                 return ln.direction, 1.0
-            return None, 0.0
+            # вне зон (полосы бывают размечены не везде) — поле направлений самого видео, как без сцены
         d, cons, n = self.flow.direction(x, y)
         if d is None or n < 5:
             return None, 0.0
@@ -94,3 +122,6 @@ class Context:
 
     def signal_state(self, t: float) -> str:
         return self.signal.at(t) if self.signal is not None else "unknown"
+
+    def signal_reliable(self) -> bool:
+        return self.signal is not None and bool(self.signal.reliable)

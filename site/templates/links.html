@@ -12,6 +12,8 @@
   {% else %}
   <div class="card link-card disabled"><h3>predictions_samples.json</h3><p class="muted">Will appear after the run on the samples (file in the repository root).</p></div>
   {% endif %}
+  <a class="card link-card" href="/analysis"><h3>Error analysis</h3><p>Reviewed contact sheets of rule candidates with verdicts and what each one changed.</p></a>
+  <a class="card link-card" href="/dashboard"><h3>Operator dashboard</h3><p>Events per minute, totals per class, timeline strips and risk alarm runs across the sample clips.</p></a>
   <a class="card link-card" href="/api/openapi.json"><h3>API</h3><p>OpenAPI schema for <code>/api/detect</code> and <code>/api/jobs</code>; usage examples are on the <a href="/demo">Demo</a> page.</p></a>
 </div>
 {% endblock %}

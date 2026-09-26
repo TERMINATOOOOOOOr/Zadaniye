@@ -48,10 +48,42 @@
 </section>
 {% endif %}
 
+{% if ablation.present %}
+<section id="ablations">
+  <h2>Ablations and time budget</h2>
+  {% if ablation.error %}
+  <p class="note warn">ablation.json could not be read: {{ ablation.error }}</p>
+  {% else %}
+  <p class="muted">{{ ablation.note }} Rows in grey are configurations we have not measured yet.</p>
+  <div class="table-scroll">
+    <table class="ablation">
+      <thead><tr><th>config</th><th>video</th><th>Part A</th><th>Part B</th><th>total ÷ duration</th><th>events per class</th><th>notes</th><th>status</th></tr></thead>
+      <tbody>
+      {% for r in ablation.rows %}
+      <tr class="{{ r.status }}">
+        <td class="mono">{{ r.config }}</td>
+        <td>{{ r.video }}</td>
+        <td class="num">{% if r.part_a_sec is not none %}{{ r.part_a_sec }} s{% else %}—{% endif %}</td>
+        <td class="num">{% if r.part_b_sec is not none %}{{ r.part_b_sec }} s{% else %}—{% endif %}</td>
+        <td class="num">{% if r.total_x_duration is not none %}{{ '%.2f'|format(r.total_x_duration) }}×{% else %}—{% endif %}</td>
+        <td>{% for c, n in r.events_per_class %}<span class="badge" style="--c: var(--c-{{ c }})">{{ c }} {{ n }}</span> {% else %}<span class="muted">—</span>{% endfor %}</td>
+        <td class="small">{{ r.notes }}</td>
+        <td><span class="status {{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td class="muted" colspan="8">ablation.json contains no rows yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if failures %}
 <section>
   <h2>Honest failures</h2>
-  <p class="muted">What the pipeline missed or over-detected, with the moment in the video.</p>
+  <p class="muted">What the pipeline missed or over-detected, with the moment in the video. The reviewed contact sheets are on the <a href="/analysis">Analysis</a> page.</p>
   <div class="table-scroll">
     <table>
       <thead><tr><th>video</th><th>time</th><th>what went wrong</th></tr></thead>

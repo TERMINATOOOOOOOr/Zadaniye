@@ -1,4 +1,5 @@
 # TrafficEye — traffic event detection from a fixed road camera
+[![CI](https://github.com/TERMINATOOOOOOOr/Zadaniye/actions/workflows/ci.yml/badge.svg)](https://github.com/TERMINATOOOOOOOr/Zadaniye/actions/workflows/ci.yml)
 
 Solution for the WIUT Hackathon 2026, Computer Vision track, elimination task.
 Given an `.mp4` from a fixed CCTV camera the system returns every traffic event as a time segment

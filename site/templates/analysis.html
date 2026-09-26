@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Error analysis — {{ site.name }}{% endblock %}
+{% block content %}
+<h1>Error analysis</h1>
+<p class="muted">Every candidate a rule produced on the sample clips was reviewed on a contact sheet before thresholds were tightened. Below are the sheets we kept, with our verdict and what each one changed. Data comes from <code>site/static/analysis/analysis.json</code>.</p>
+
+{% if error %}
+<p class="note warn">analysis.json could not be read: {{ error }}</p>
+{% elif not present %}
+<div class="note empty">
+  <h3>No review yet</h3>
+  <p>Put <code>analysis.json</code> and the contact sheets into <code>site/static/analysis/</code> — the page assembles itself.</p>
+</div>
+{% elif not entries %}
+<p class="note">analysis.json contains no entries yet.</p>
+{% endif %}
+
+{% if entries %}
+<p class="small muted">{{ how_to_read }}</p>
+<div class="verdict-summary" role="list">
+  {% for key, label in verdict_labels.items() %}
+  <span class="verdict {{ key }}" role="listitem">{{ label }}: <b>{{ counts.get(key, 0) }}</b></span>
+  {% endfor %}
+  <span class="muted small">{{ entries|length }} sheets · {{ in_output }} of them are in the final output</span>
+</div>
+
+<div class="analysis-grid">
+  {% for e in entries %}
+  <article class="card analysis-card" id="{{ e.id }}">
+    <a href="{{ e.url }}" target="_blank" rel="noopener"><img src="{{ e.url }}" alt="Contact sheet: {{ e.cls }} candidate in {{ e.video }}{% if e.t is not none %} at {{ e.t|fmt_time }}{% endif %}" loading="lazy" width="1400" height="525"></a>
+    <div class="analysis-head">
+      <span class="badge" style="--c: var(--c-{{ e.cls }})">{{ e.cls }}</span>
+      <span class="verdict {{ e.verdict }}">{{ verdict_labels.get(e.verdict, e.verdict) }}</span>
+      <span class="mono small muted">{{ e.video }} · {% if e.t is not none %}{{ e.t|fmt_time }}{% else %}time not on the sheet{% endif %}{% if e.in_output %} · in output{% endif %}</span>
+    </div>
+    <h4>Why</h4>
+    <p>{{ e.why }}</p>
+    <h4>What it taught us</h4>
+    <p>{{ e.learned }}</p>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

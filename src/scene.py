@@ -142,6 +142,42 @@ class Scene:
             notes=self.notes,
         )
 
+    def transform(self, M, frame_size: tuple[int, int] | None = None) -> "Scene":
+        """Применить подобие M (2×3: [[a, -b, tx], [b, a, ty]]) ко всей геометрии; вернуть новую сцену.
+        Полигоны, полилинии и концы стоп-линий переносятся точками; векторы направлений только поворачиваются;
+        ROI светофора: центр переносится, размер умножается на масштаб. frame_size — размер кадра видео."""
+        M = np.asarray(M, dtype=np.float64).reshape(2, 3)
+        scale = float(np.hypot(M[0, 0], M[1, 0]))
+        rot = M[:, :2] / scale if scale > 1e-9 else np.eye(2)
+        pts = lambda p: (None if p is None else _transform_points(M, p))
+        vec = lambda v: _unit(rot @ np.asarray(v, dtype=float))
+        roi = None
+        if self.signal_roi:
+            x, y, w, h = self.signal_roi
+            c = _transform_points(M, [[x + w / 2.0, y + h / 2.0]])[0]
+            nw, nh = w * scale, h * scale
+            roi = (int(round(c[0] - nw / 2.0)), int(round(c[1] - nh / 2.0)), max(1, int(round(nw))), max(1, int(round(nh))))
+        return Scene(
+            frame_size=tuple(frame_size) if frame_size else self.frame_size,
+            px_per_meter=(self.px_per_meter * scale if self.px_per_meter else None),
+            road=pts(self.road), intersection=pts(self.intersection),
+            lanes=[Lane(l.name, pts(l.polygon), vec(l.direction), set(l.allowed)) for l in self.lanes],
+            crosswalks=[(n, pts(p)) for n, p in self.crosswalks],
+            stop_lines=[StopLine(s.name, _transform_points(M, [s.p1])[0], _transform_points(M, [s.p2])[0], vec(s.approach), list(s.lanes))
+                        for s in self.stop_lines],
+            solid_lines=[(n, pts(p)) for n, p in self.solid_lines],
+            islands=[pts(p) for p in self.islands],
+            signal_visible=self.signal_visible,
+            signal_roi=roi,
+            notes=self.notes,
+        )
+
+
+def _transform_points(M: np.ndarray, pts) -> np.ndarray:
+    """Точки (N, 2) через аффинную матрицу 2×3 → float32 (N, 2)."""
+    p = np.asarray(pts, dtype=np.float64).reshape(-1, 2)
+    return (p @ M[:, :2].T + M[:, 2]).astype(np.float32)
+
 
 def load_scene(path: str | Path) -> Scene | None:
     p = Path(path)
