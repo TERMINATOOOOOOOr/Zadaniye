@@ -78,7 +78,9 @@ def _run(duration: float = 40.0, patch=PATCH, patch_from: float = 10.0, parked=N
     return objs, report, tracks
 
 
-def test_static_patch_on_road_is_detected():
+def test_static_patch_on_road_is_detected(monkeypatch):
+    import src.static_objects as so
+    monkeypatch.setattr(so, "WARMUP_SEC", 0.0)   # синтетика короткая: патч появляется на 10-й секунде
     objs, report, _ = _run()
     assert len(objs) == 1, [(o.t0, o.t1, o.box, r) for o, r in report]
     o = objs[0]

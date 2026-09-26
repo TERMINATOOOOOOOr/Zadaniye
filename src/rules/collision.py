@@ -91,6 +91,10 @@ def _analyse_pair(ta: Track, tb: Track, s: float, e: float, is_hotspot=None):
             V = A if ta.kind == "vehicle" else B
             if (V["speed"][lo:i_c + 1] < 2.0 * V["h"][lo:i_c + 1]).all():
                 return None
+        if rest is None and len(ts) - i_c < int(1.0 / 0.08):
+            # пара распалась сразу после контакта (бокс слился с соседом или трек оборвался): авария только если
+            # уцелевший трек сам встал и стоит REST_HOLD — иначе это обычное перекрытие в проекции камеры
+            rest = _survivor_rest(ta, tb, t_c)
         if rest is not None and jerk:
             # конец: объекты остановились и постояли (по конвенции «все остановились»); не короче ACCIDENT_MIN_SEC
             return "accident", (t_c, max(rest + 1.0, t_c + ACCIDENT_MIN_SEC))
@@ -122,10 +126,31 @@ def _rest_time(A, B, ts, i_c):
         b_rest = (B["speed"][i:i + hold] < REST_REL * B["h"][i:i + hold]).all()
         if a_rest and b_rest:
             return float(ts[i])
-    # объект пропал (слился с другим боксом) почти сразу после контакта — тоже признак
-    if len(ts) - i_c < int(1.0 / step):
-        return float(ts[-1])
     return None
+
+
+def _survivor_rest(ta: Track, tb: Track, t_c: float) -> float | None:
+    """Пара распалась после контакта: смотрим треки по отдельности. Тот, кто продолжает наблюдаться, должен
+    остановиться не позже REST_WITHIN после контакта и стоять REST_HOLD секунд; если ни один трек не живёт так долго —
+    доказательств нет."""
+    best = None
+    for tr in (ta, tb):
+        if tr.t1 < t_c + REST_HOLD:
+            continue
+        i0 = tr.index_at(t_c)
+        i1 = tr.index_at(t_c + REST_WITHIN + REST_HOLD)
+        rest = tr.speed[i0:i1 + 1] < REST_REL * np.maximum(tr.h[i0:i1 + 1], 1.0)
+        run_start = None
+        for k in range(len(rest)):
+            if rest[k] and run_start is None:
+                run_start = k
+            if (not rest[k] or k == len(rest) - 1) and run_start is not None:
+                end = k if rest[k] else k - 1
+                if tr.t[i0 + end] - tr.t[i0 + run_start] >= REST_HOLD and tr.t[i0 + run_start] - t_c <= REST_WITHIN:
+                    t_rest = float(tr.t[i0 + run_start])
+                    best = t_rest if best is None else min(best, t_rest)
+                run_start = None
+    return best
 
 
 def _jerk(A, B, ts, i_c) -> bool:

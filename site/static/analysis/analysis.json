@@ -1,18 +1,18 @@
 {
-  "how_to_read": "Each contact sheet shows six frames of the window in which a rule fired, left to right and top to bottom, without boxes. Verdicts were made by looking at the frames, not at the tracker output: true positive = the event is visible; false positive = the frames show something else; unclear = six stills are not enough to decide.",
+  "how_to_read": "Each contact sheet shows six frames of the window in which a rule fired, left to right and top to bottom (the newer sheets carry the timestamp, the signal state or the tracked boxes on the frames). Verdicts were made by looking at the frames, not at the tracker output: true positive = the event is visible; false positive = the frames show something else; unclear = six stills are not enough to decide. The review was done on the 960 px development run; 'in output' says whether the moment is in the final 1280 px run (predictions_samples.json).",
   "entries": [
     {
       "image": "analysis/C3896_jw_184.jpg", "cls": "jaywalking", "video": "C3896.MP4", "t": 184,
       "verdict": "unclear",
       "why": "The three pedestrians in the top row walk on or along the near zebra by the traffic island; in the bottom row one person stands at the very edge of the crossing while an SUV passes. Whether the ground point left the zebra polygon or only its painted edge cannot be settled from six stills.",
-      "learned": "The crossing polygons are the tightest part of the scene: a person on the painted edge flips between jaywalking and not. The segment stayed in the output (184.2–193.5 s) because part of the walk is clearly outside the stripes; a per-clip alignment of the polygons would help more than a tolerance.",
+      "learned": "The crossing polygons are the tightest part of the scene: a person on the painted edge flips between jaywalking and not. The segment stayed in the output (in the final run it is part of a longer 165.6–203.7 s segment) because part of the walk is clearly outside the stripes. The scene is now aligned per clip; for C3896 the transform is the identity, so here the polygon edge itself is the limit.",
       "in_output": true
     },
     {
       "image": "analysis/C3896_nm_45.jpg", "cls": "near_miss", "video": "C3896.MP4", "t": 45,
       "verdict": "false_positive",
       "why": "A delivery moped rolls across the near zebra while a pedestrian crosses in front of it. Traffic is queued at the red light, both move at walking pace, nobody brakes hard or swerves.",
-      "learned": "near_miss now requires a fast approach plus hard braking or a swerve; slow encounters next to a queue no longer qualify. The final output has no near_miss here — the moment appears as failure_to_yield 46.3–48.5 s instead.",
+      "learned": "near_miss now requires a fast approach plus hard braking and a swerve; slow encounters next to a queue no longer qualify. The final output has no near_miss here — the moment appears as failure_to_yield 46.3–48.5 s instead.",
       "in_output": false
     },
     {
@@ -26,7 +26,7 @@
       "image": "analysis/C3896_st_255.jpg", "cls": "stopped_vehicle", "video": "C3896.MP4", "t": 255,
       "verdict": "false_positive",
       "why": "Nothing stands still on the carriageway for 10 s: buses roll through the junction, cars wait in the queue at the stop line, pedestrians use the zebra. The candidate is a vehicle in the signal queue.",
-      "learned": "The queue exclusion (another stopped vehicle within 3.5 box heights, or a regular stop location learned from the clip) removes it; C3896 has no stopped_vehicle in the final output.",
+      "learned": "The queue exclusion (another stopped vehicle nearby, a regular stop location, and now any stop above the stop line while the lamp is red) removes it; C3896 has no stopped_vehicle in the final output.",
       "in_output": false
     },
     {
@@ -40,69 +40,69 @@
       "image": "analysis/C3896_ww_7.jpg", "cls": "wrong_way", "video": "C3896.MP4", "t": 7,
       "verdict": "false_positive",
       "why": "Traffic flows normally in both carriageways. The only vehicle with an odd heading is a white car turning out of the side street at the bottom right (frames 4–6), whose direction briefly opposes the lane it merges into.",
-      "learned": "wrong_way now requires a real displacement against the flow for at least 1.5 s, not just a heading angle; turning vehicles at the mouth of the side street stop qualifying. No wrong_way in the final output.",
+      "learned": "wrong_way now requires a real displacement against the flow for at least 2.5 s and uses the direction zones of the scene; turning vehicles at the mouth of the side street stop qualifying. This candidate is gone. The final run has one wrong_way in C3896 at 120.9–124.8 s, a different case: the articulated bus driving in the right direction along the median, whose tall box bottoms out in the zone of the opposite carriageway — also a false positive; we left it in the output rather than tune against a single case, and it is the reason for a planned lane-level zone on the median side.",
       "in_output": false
     },
     {
       "image": "analysis/C3896_ww_92.jpg", "cls": "wrong_way", "video": "C3896.MP4", "t": 92,
       "verdict": "unclear",
       "why": "No car is visibly driving against traffic in the six frames. The closest thing is a dark sedan standing diagonally across the far lanes near the stop line (frame 1), consistent with a car finishing a turn from the side street.",
-      "learned": "Same lesson as at 7 s: a turn across the lane direction is not wrong-way driving. The candidate disappeared with the displacement requirement; we could not confirm what the track actually was.",
+      "learned": "Same lesson as at 7 s: a turn across the lane direction is not wrong-way driving. The candidate disappeared with the displacement requirement and the intersection exclusion; we could not confirm what the track actually was.",
       "in_output": false
     },
     {
       "image": "analysis/C3897_acc_315.jpg", "cls": "accident", "video": "C3897.MP4", "t": 315,
       "verdict": "false_positive",
       "why": "An SUV passes pedestrians on the side zebra at the bottom left. Its box overlaps the pedestrians' boxes and it slows for the crossing — exactly the contact-then-stop signature the rule looks for. There is no contact.",
-      "learned": "Kept in the output on purpose (315.4–317.8 s) rather than tuning the rule against a single case. Box overlap between a car and pedestrians on a crossing is normal, so contact for vehicle–pedestrian pairs should be measured on ground points, not on boxes.",
-      "in_output": true
+      "learned": "It was kept in the first submission on purpose (315.4–317.8 s) rather than tuning the rule against a single case. On the 1280 detections this pair no longer meets the contact test. The 1280 run first produced a different false accident in C3897 (217.3–220.3 s: two cars passing at the bottom-right corner of the frame, both boxes clipped by the edge and gone within a second) through the branch 'a pair that disappeared right after the contact counts as came to rest'; that branch has been removed — when a pair breaks up within 1 s after the contact, the accident is kept only if a surviving track itself comes to rest within 2.5 s and stays at rest for 4 s. C3897 has no accident in the final output. Box overlap between a car and pedestrians on a crossing is normal, so contact for vehicle–pedestrian pairs should be measured on ground points.",
+      "in_output": false
     },
     {
       "image": "analysis/C3897_st_230.jpg", "cls": "stopped_vehicle", "video": "C3897.MP4", "t": 230,
       "verdict": "false_positive",
       "why": "No car is stationary on the carriageway. A delivery moped and a pedestrian in white stand at the foot of the near zebra by the island (frames 1–3); the traffic behind them is a moving stream.",
-      "learned": "A rider or a person standing at the crossing edge must not feed the stopped_vehicle rule. The final output has jaywalking here (224.6–228.9 and 232.6–237.7 s) and stopped_vehicle only at 293.8–308.0 s.",
+      "learned": "A rider or a person standing at the crossing edge must not feed the stopped_vehicle rule. The final output has jaywalking here (224.6–228.8, 232.5–234.1 and 235.3–238.3 s) and no stopped_vehicle at all in C3897.",
       "in_output": false
     },
     {
       "image": "analysis/C3897_st_51.jpg", "cls": "stopped_vehicle", "video": "C3897.MP4", "t": 51,
       "verdict": "false_positive",
       "why": "Buses and cars move through the junction; the only object that stays put is a man in a white shirt standing on the road at the tip of the island (frames 4–6).",
-      "learned": "Same as at 230 s: a person standing on the carriageway is jaywalking, not a stopped vehicle. The output says jaywalking 46.5–47.6 and 53.6–55.3 s here and nothing about a stopped vehicle.",
+      "learned": "Same as at 230 s: a person standing on the carriageway is jaywalking, not a stopped vehicle. The final output has jaywalking 43.6–44.7 and 57.1–59.1 s around this moment and nothing about a stopped vehicle.",
       "in_output": false
     },
     {
       "image": "analysis/C3902_jw_140.jpg", "cls": "jaywalking", "video": "C3902.MP4", "t": 140,
       "verdict": "false_positive",
-      "why": "Everybody is on a zebra: two people finish the near crossing (top row), a large group crosses the far zebra (bottom row). C3902 is framed about 80 px to the left and 50 px lower than C3896, so the crossing polygons drawn for C3896 miss the zebras here.",
-      "learned": "The scene must be aligned per clip. This shift is why C3902 carries a 54 s jaywalking segment (134.6–189.0 s) in the output; the planned fix is to estimate the shift from static objects (the traffic-light boxes) before applying the scene.",
-      "in_output": true
+      "why": "Everybody is on a zebra: two people finish the near crossing (top row), a large group crosses the far zebra (bottom row). C3902 is framed about 120 px to the left and 70 px lower than C3896, so the crossing polygons drawn for C3896 miss the zebras here.",
+      "learned": "The scene is now aligned per clip (src/align.py): a median background of the clip is matched to the reference background of C3896 with SIFT and a similarity transform is fitted by RANSAC. For C3902 the estimated transform is a shift of (−122, +71) px with scale 1.014 and rotation −0.75°, and the residuals of the three traffic lights drop from 87/95/125 px to 7/3/7 px. The 54 s segment is gone: the final output has no jaywalking between 131.3 and 142.9 s.",
+      "in_output": false
     },
     {
       "image": "analysis/C3902_nm_67.jpg", "cls": "near_miss", "video": "C3902.MP4", "t": 67,
       "verdict": "false_positive",
       "why": "A white pickup waits at the edge of the near zebra while people cross (frames 1–3), then the articulated bus and a dark sedan pass it closely (frames 4–6). Close, but nobody brakes hard or swerves and the pickup is stationary.",
-      "learned": "Passing a stationary vehicle at a regular stop location is excluded from near_miss. The output shows stopped_vehicle 58.7–70.2 s for the waiting pickup, which is itself arguable: it is waiting for pedestrians, not stalled.",
+      "learned": "Passing a stationary vehicle at a regular stop location is excluded from near_miss. The first submission reported stopped_vehicle 58.7–70.2 s for the waiting pickup, which was itself wrong — it waits for pedestrians; the tightened rule (a stop within 2.5 box heights of a zebra is waiting) removed it.",
       "in_output": false
     },
     {
       "image": "analysis/C3902_ut_2.jpg", "cls": "illegal_u_turn", "video": "C3902.MP4", "t": 2,
       "verdict": "false_positive",
       "why": "A black SUV simply drives across the junction from left to right; no vehicle turns around. The candidate lies in the first two seconds of the clip, where the track has a handful of observations and its heading is unreliable.",
-      "learned": "Heading-based rules need a minimum track history before they may fire. Nothing but jaywalking (0.0–8.6 s) is reported here.",
+      "learned": "Heading-based rules need a minimum track history before they may fire. The final output reports jaywalking (2.4–27.6 s) here and a solid_line_crossing at 1.8–3.8 s on the far approach, which we could not confirm or reject on frames.",
       "in_output": false
     },
     {
       "image": "analysis/C3905_acc1.jpg", "cls": "accident", "video": "C3905.MP4", "t": null,
       "verdict": "false_positive",
       "why": "Dusk, dense queue: a white crossover works its way into the queue between other cars, a lorry follows behind. Cars close the gap and stop, which the accident rule reads as contact followed by a stop. No collision.",
-      "learned": "The classic false positive of the approach — catching up with a queue. The rule now excludes approaches to a queued or stopped vehicle at a regular stop location; C3905 has no accident in the output. The sheet carries no timestamp, so the second is not recorded.",
+      "learned": "The classic false positive of the approach — catching up with a queue. The rule excludes approaches to a queued or stopped vehicle at a regular stop location; C3905 has no accident in the output. The sheet carries no timestamp, so the second is not recorded.",
       "in_output": false
     },
     {
       "image": "analysis/C3905_acc2.jpg", "cls": "accident", "video": "C3905.MP4", "t": null,
       "verdict": "false_positive",
-      "why": "A white semi-trailer swings through the junction across the near zebra while pedestrians walk around it and cars queue on the right. The long trailer box overlaps the boxes of the cars beside it while it slows in the turn: box IoU above 0.25 plus a stop, no contact.",
+      "why": "A white semi-trailer swings through the junction across the near zebra while pedestrians walk around it and cars queue on the right. The long trailer box overlaps the boxes of the cars beside it while it slows in the turn: box IoU above the threshold plus a stop, no contact.",
       "learned": "Box IoU is a poor contact test for long vehicles seen from above at an angle. Excluded by the queue rule for now; a ground-point distance test for large boxes is the proper fix. Second not recorded on the sheet.",
       "in_output": false
     },
@@ -110,22 +110,85 @@
       "image": "analysis/C3905_nm1.jpg", "cls": "near_miss", "video": "C3905.MP4", "t": null,
       "verdict": "unclear",
       "why": "Red phase, the far zebra: a delivery moped crosses among pedestrians (frames 4–6). Distances are small but there is no visible braking or dodging, and the frames are too dark and too far away to judge.",
-      "learned": "Far-zebra interactions are tiny at 960 px input (a person there is roughly 30–40 px tall); we do not trust near_miss verdicts at that distance. No near_miss in the final output of C3905. Second not recorded on the sheet.",
+      "learned": "Far-zebra interactions were tiny on the 960 px development run (a person there was roughly 30–40 px tall in the detector's input). The final run uses 1280 px and finds 60 % more pedestrian tracks on C3905, but we still do not trust near_miss verdicts at that distance. No near_miss in the final output of C3905. Second not recorded on the sheet.",
       "in_output": false
     },
     {
       "image": "analysis/C3905_nm2.jpg", "cls": "near_miss", "video": "C3905.MP4", "t": null,
       "verdict": "unclear",
       "why": "A yellow minibus turns through the junction and passes a cyclist and a pedestrian on the near zebra (frames 4–6) with a couple of metres to spare. A close pass, but whether anyone had to brake or swerve is not visible in stills.",
-      "learned": "By definition the moment is a failure_to_yield. C3905's output has two failure_to_yield segments (13.1–13.8 and 23.9–24.5 s); without a timestamp on the sheet we could not match this one to them.",
+      "learned": "By definition the moment is a failure_to_yield. The final output of C3905 has two failure_to_yield segments (11.4–14.5 and 23.9–24.5 s); without a timestamp on the sheet we could not match this one to them.",
       "in_output": false
     },
     {
       "image": "analysis/C3905_stopped.jpg", "cls": "stopped_vehicle", "video": "C3905.MP4", "t": null,
       "verdict": "unclear",
       "why": "Red phase, empty carriageway. Two things stand still: a delivery moped waiting at the far zebra by the island (frames 1–3) and a white van at the left kerb. Neither is a stalled vehicle on the carriageway.",
-      "learned": "The output reports stopped_vehicle 1.5–24.2 s in C3905, most likely one of these two. Waiting riders and kerbside vans are excluded only when their spot is a regular stop location seen more than once in the clip, and a 128 s clip is too short to learn it.",
+      "learned": "The first submission reported stopped_vehicle 1.5–24.2 s here. The sheet with timestamps and tracked boxes (C3905 at 1.5 s, below) settles it as a false positive: the tightened rule excludes stops within 2.5 box heights of a zebra and stops above the stop line during red, and the final output has no stopped_vehicle in C3905.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3896_rl_73.jpg", "cls": "red_light", "video": "C3896.MP4", "t": 73,
+      "verdict": "true_positive",
+      "why": "Frames from 72.2 to 78.9 s, the lamp read as red since 66.4 s (the phase runs to 102.6 s; the top-right of every frame shows the lamp). A black sedan and a white car drive through the far zebra past the stop line while pedestrians are walking on the crossing (frames 3–6: a man with a phone, then two youngsters on the stripes). The rest of the far approach is standing.",
+      "learned": "This is the case the lamp reader was rebuilt for: the lamp is faint in daylight and absolute HSV thresholds read it as unknown, while the colour energy of each section relative to the other two reads it correctly and the phases are periodic (75 s cycle). red_light takes red only from the lamp, at least 1.5 s after it came on and 1 s before it goes, and needs the car to enter the intersection within 4 s. In the output: 73.1–77.9 s.",
       "in_output": true
+    },
+    {
+      "image": "analysis/C3896_rl_79.jpg", "cls": "red_light", "video": "C3896.MP4", "t": 79,
+      "verdict": "true_positive",
+      "why": "78.3–83.5 s, the same red phase. A white crossover crosses the stop line and the zebra (frames 2–3) while three pedestrians walk on the crossing right in front of a black sedan that has stopped on the stripes.",
+      "learned": "Second violation in the same red, 79.3–82.5 s in the output. The black sedan standing on the zebra would be a stop_line candidate if it had arrived during this red and stood 0.35–2.5 box heights past the line; it is not reported, which is the conservative side of that rule.",
+      "in_output": true
+    },
+    {
+      "image": "analysis/C3905_sl_79.jpg", "cls": "stop_line", "video": "C3905.MP4", "t": 79,
+      "verdict": "true_positive",
+      "why": "Dusk, 78.4–115.8 s. The lamp reads red from 76.0 to 114.8 s (visible in the frames: red lamp, then green in the last one). A row of cars stands on the zebra beyond the stop line for the whole red phase — a white van, a crossover, a dark saloon — and pedestrians thread their way around them.",
+      "learned": "stop_line = arrived during this red, stopped 0.35–2.5 box heights beyond the line for at least 2 s, never entered the intersection; the segment lasts until green: 79.2–114.8 s in the output, the only stop_line on the samples. The lamp reader works at dusk with the same relative-energy rule as in daylight.",
+      "in_output": true
+    },
+    {
+      "image": "analysis/C3897_obs_58.jpg", "cls": "road_obstacle", "video": "C3897.MP4", "t": 58,
+      "verdict": "false_positive",
+      "why": "Background-model candidate 56.5–80.4 s on the side zebra: the yellow box marks a dark patch next to a man standing on the crossing — his shadow. He stands there for half a minute and the shadow does not move either.",
+      "learned": "The shadow passes every image test (persistent, compact, own edges, contrast). What gives it away is the context: a stationary tracked person within one box height for more than half of the blob's life. The 'stationary tracked neighbour' filter rejects it now; C3897 has no road_obstacle in the output.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3902_obs_80.jpg", "cls": "road_obstacle", "video": "C3902.MP4", "t": 80,
+      "verdict": "false_positive",
+      "why": "Dusk, dense queue on the far approach, 78.8–121.2 s. The yellow box sits on part of a car inside the queue; five more blobs like it were found between 80 and 124 s. The queue stands through the red phase (78.4–117.6 s) and the detector loses parts of cars behind the mast and the overlapping bodies.",
+      "learned": "A queue during red produces 'static objects' wherever the tracker does not cover a car. Two filters catch it: a stationary tracked neighbour for most of the blob's life, and 'lives at least 60 % of its time during red'. All six are rejected; C3902 has no road_obstacle in the output. The 1280 run first kept one object in C3896 (0.3–47.9 s), a blob at the left frame edge that is there from the first frame: the background model is initialised from the first frame, so anything that stands at t = 0 and later moves away leaves a ghost. Blobs whose life starts within the first 20 s are now rejected (warm-up); road_obstacle is 0 on all four clips.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3897_st_293.jpg", "cls": "stopped_vehicle", "video": "C3897.MP4", "t": 293,
+      "verdict": "false_positive",
+      "why": "293.8–308.0 s, the lamp red since 284.6 s. Red boxes are the stopped tracks: the whole far approach stands at the stop line while pedestrians cross in front of it. The candidate is a white car at the head of the queue in the right lane (id 5819).",
+      "learned": "One neighbour test at one moment was not enough: at the head of the queue the nearest stopped car can be more than 2.5 box heights away. Now any stop above the stop line while the lamp is red counts as a queue (any depth, ±60 % of the line span), and the neighbour test runs at three moments of the stop. Excluded; C3897 has no stopped_vehicle in the output.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3905_st_1.jpg", "cls": "stopped_vehicle", "video": "C3905.MP4", "t": 1,
+      "verdict": "false_positive",
+      "why": "1.5–24.2 s, dusk, red phase until 34.8 s. Red boxes are the stopped tracks: a white car standing at the far zebra by the island, a van at the left edge of the frame, a bus at its stop at the top. Nothing is stalled on the carriageway; they wait for the signal or for pedestrians.",
+      "learned": "Two new exclusions cover it: a stop within 2.5 box heights of a zebra is waiting, and a stop above the stop line while the lamp is red is a queue. The first submission reported this as stopped_vehicle 1.5–24.2 s (the sheet without a timestamp above); the final output has no stopped_vehicle in C3905.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3896_slc_107.jpg", "cls": "solid_line_crossing", "video": "C3896.MP4", "t": 107,
+      "verdict": "true_positive",
+      "why": "Track 1867, a black car, 106.9–110.1 s on the 960 px development run. Red lines are the four solid dividers of the far approach, the cyan dot is the ground point. The car comes down the leftmost lane and moves one lane to the right across far_L4 (frames 2–4): one second before it is clearly on the left, one second after clearly on the right.",
+      "learned": "This is what the settled-lane-change rule is for: 1 s on each side, at least 0.15 box heights from the line, 80 % of the frames agreeing. Plausible true — the frames show a lane change over a continuous line, but the line is partly hidden by the tree and the mast, so we call it plausible rather than certain. Reported at 107.6–109.0 s on the 960 run; it does not appear in the final 1280 run, whose track set differs.",
+      "in_output": false
+    },
+    {
+      "image": "analysis/C3897_slc_130.jpg", "cls": "solid_line_crossing", "video": "C3897.MP4", "t": 130,
+      "verdict": "unclear",
+      "why": "Track 2845, an SUV, 129.5–132.7 s on the 960 px run. The car drives down behind the mast pole and its box jumps from the left of far_L3 (frame 2) to the right of it (frame 4); the pole and the lorry hide the moment of crossing.",
+      "learned": "Six stills cannot tell a lane change from a box jump caused by the occlusion. Reported at 130.1–131.6 s on the 960 run; not in the final 1280 run. Lines behind the mast are the weak spot of this rule: the settle windows keep box jitter out but cannot see through the pole.",
+      "in_output": false
     }
   ]
 }

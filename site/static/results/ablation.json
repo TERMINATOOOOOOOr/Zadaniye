@@ -1,19 +1,246 @@
 {
-  "note": "Part A + Part B measured with the organizers' harness (all decoding included), fp16, nothing else running. total_x_duration = (part_a_sec + part_b_sec) / video duration; the limit is 3x.",
+  "note": "Part A + Part B measured with the organizers' harness (all video decoding included) on an RTX 4050 laptop GPU (i7-13650HX), fp16. total ÷ duration = (part_a_sec + part_b_sec) / video duration; the limit is 3×. The samples are 4K 4:2:2 10-bit, which NVDEC cannot decode, so decoding is software on all CPU cores and the timings move with whatever else the machine is doing. Detector-only rows have no harness timing: they compare what the tracker sees.",
   "rows": [
-    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3896.MP4", "duration_sec": 340.3, "part_a_sec": 99, "part_b_sec": 242, "total_x_duration": 1.00,
-     "events_per_class": {"jaywalking": 19, "failure_to_yield": 5}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
-    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3897.MP4", "duration_sec": 317.8, "part_a_sec": 93, "part_b_sec": 215, "total_x_duration": 0.97,
-     "events_per_class": {"jaywalking": 21, "failure_to_yield": 7, "stopped_vehicle": 1, "accident": 1}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
-    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3902.MP4", "duration_sec": 317.8, "part_a_sec": 99, "part_b_sec": 215, "total_x_duration": 0.99,
-     "events_per_class": {"jaywalking": 19, "failure_to_yield": 3, "stopped_vehicle": 2}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
-    {"config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4", "video": "C3905.MP4", "duration_sec": 127.6, "part_a_sec": 39, "part_b_sec": 72, "total_x_duration": 0.87,
-     "events_per_class": {"jaywalking": 7, "failure_to_yield": 2, "stopped_vehicle": 1, "congestion": 1}, "notes": "RTX 4050 laptop GPU (i7-13650HX)", "status": "measured"},
-    {"config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
-     "events_per_class": {}, "notes": "larger input for Part A; to be measured", "status": "pending"},
-    {"config": "YOLO11s 960 stride 2 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
-     "events_per_class": {}, "notes": "denser sampling for Part A; to be measured", "status": "pending"},
-    {"config": "YOLO11n 960 stride 3 + YOLO11n 640 stride 4", "video": "C3896–C3905", "duration_sec": null, "part_a_sec": null, "part_b_sec": null, "total_x_duration": null,
-     "events_per_class": {}, "notes": "smaller detector for Part A; to be measured", "status": "pending"}
+    {
+      "config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4 (final)",
+      "video": "C3896.MP4",
+      "duration_sec": 340.3,
+      "part_a_sec": 178.5,
+      "part_b_sec": 309.7,
+      "total_x_duration": 1.43,
+      "events_per_class": {
+        "red_light": 2,
+        "wrong_way": 1,
+        "jaywalking": 13,
+        "failure_to_yield": 5
+      },
+      "notes": "final run of 26.09 (predictions_samples.json), events after the collision and warm-up fixes: Part A includes scene alignment, the lamp reader and the background model; other work was running on the machine",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4 (final)",
+      "video": "C3897.MP4",
+      "duration_sec": 317.8,
+      "part_a_sec": 154.4,
+      "part_b_sec": 274.6,
+      "total_x_duration": 1.35,
+      "events_per_class": {
+        "jaywalking": 25,
+        "failure_to_yield": 7
+      },
+      "notes": "final run of 26.09, events after the collision and warm-up fixes",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4 (final)",
+      "video": "C3902.MP4",
+      "duration_sec": 317.8,
+      "part_a_sec": 173.6,
+      "part_b_sec": 278.5,
+      "total_x_duration": 1.42,
+      "events_per_class": {
+        "stopped_vehicle": 1,
+        "jaywalking": 26,
+        "failure_to_yield": 1,
+        "solid_line_crossing": 2
+      },
+      "notes": "final run of 26.09, events after the collision and warm-up fixes",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4 (final)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": 68.1,
+      "part_b_sec": 87.7,
+      "total_x_duration": 1.22,
+      "events_per_class": {
+        "jaywalking": 6,
+        "failure_to_yield": 2,
+        "stop_line": 1
+      },
+      "notes": "final run of 26.09, events after the collision and warm-up fixes (unchanged on this clip)",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": 55.0,
+      "part_b_sec": 89.3,
+      "total_x_duration": 1.13,
+      "events_per_class": {},
+      "notes": "detector input 960 vs 1280 with the official harness, same code otherwise (another process was using the CPU during both runs); events omitted because the solid-line rule was tightened after this measurement",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 1280 stride 3 + YOLO11n 640 stride 4",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": 68.4,
+      "part_b_sec": 91.2,
+      "total_x_duration": 1.25,
+      "events_per_class": {},
+      "notes": "1280 costs about 0.1× of the duration more than 960 in Part A (68 s vs 55 s on this clip); Part B is unchanged",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 (detector only)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "tracks": 556,
+      "vehicles": 255,
+      "persons": 269,
+      "person_obs": 19188,
+      "median_person_h_px": 133,
+      "events_per_class": {},
+      "notes": "detections + tracking only: 556 tracks (255 vehicles, 269 persons), 19.2k person observations, median person height 133 px",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 1280 stride 3 (detector only)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "tracks": 763,
+      "vehicles": 302,
+      "persons": 430,
+      "person_obs": 30648,
+      "median_person_h_px": 108,
+      "events_per_class": {},
+      "notes": "763 tracks (302 vehicles, 430 persons), 30.6k person observations, median person height 108 px: the extra tracks are the small, far pedestrians",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 2 (detector only)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "tracks": 674,
+      "vehicles": 292,
+      "persons": 329,
+      "person_obs": 29554,
+      "median_person_h_px": 130,
+      "events_per_class": {},
+      "notes": "674 tracks (292 vehicles, 329 persons), 29.6k person observations: denser sampling keeps more tracks alive but does not see the far pedestrians",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11n 960 stride 3 (detector only)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "tracks": 580,
+      "vehicles": 315,
+      "persons": 249,
+      "person_obs": 17111,
+      "median_person_h_px": 143,
+      "events_per_class": {},
+      "notes": "580 tracks (315 vehicles, 249 persons), 17.1k person observations: the small model loses pedestrians",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4 (first submission)",
+      "video": "C3896.MP4",
+      "duration_sec": 340.3,
+      "part_a_sec": 99,
+      "part_b_sec": 242,
+      "total_x_duration": 1.0,
+      "events_per_class": {
+        "jaywalking": 19,
+        "failure_to_yield": 5
+      },
+      "notes": "24.09, idle machine; no scene alignment, red_light/stop_line off, no background model",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4 (first submission)",
+      "video": "C3897.MP4",
+      "duration_sec": 317.8,
+      "part_a_sec": 93,
+      "part_b_sec": 215,
+      "total_x_duration": 0.97,
+      "events_per_class": {
+        "jaywalking": 21,
+        "failure_to_yield": 7,
+        "stopped_vehicle": 1,
+        "accident": 1
+      },
+      "notes": "24.09, idle machine",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4 (first submission)",
+      "video": "C3902.MP4",
+      "duration_sec": 317.8,
+      "part_a_sec": 99,
+      "part_b_sec": 215,
+      "total_x_duration": 0.99,
+      "events_per_class": {
+        "jaywalking": 19,
+        "failure_to_yield": 3,
+        "stopped_vehicle": 2
+      },
+      "notes": "24.09, idle machine; the scene was not aligned, hence a 54 s jaywalking segment over the far zebra",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 3 + YOLO11n 640 stride 4 (first submission)",
+      "video": "C3905.MP4",
+      "duration_sec": 127.6,
+      "part_a_sec": 39,
+      "part_b_sec": 72,
+      "total_x_duration": 0.87,
+      "events_per_class": {
+        "jaywalking": 7,
+        "failure_to_yield": 2,
+        "stopped_vehicle": 1,
+        "congestion": 1
+      },
+      "notes": "24.09, idle machine",
+      "status": "measured"
+    },
+    {
+      "config": "YOLO11s 960 stride 2 + YOLO11n 640 stride 4",
+      "video": "C3896–C3905",
+      "duration_sec": null,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "events_per_class": {},
+      "notes": "full harness not measured (detector-only row above)",
+      "status": "pending"
+    },
+    {
+      "config": "YOLO11n 960 stride 3 + YOLO11n 640 stride 4",
+      "video": "C3896–C3905",
+      "duration_sec": null,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "events_per_class": {},
+      "notes": "full harness not measured (detector-only row above)",
+      "status": "pending"
+    },
+    {
+      "config": "final configuration on the organizers' hardware (T4)",
+      "video": "C3896–C3905",
+      "duration_sec": null,
+      "part_a_sec": null,
+      "part_b_sec": null,
+      "total_x_duration": null,
+      "events_per_class": {},
+      "notes": "not measured; if the budget gets tight, WIUT_IMGSZ_A=960 saves about 0.1× and WIUT_STRIDE_A=4 more",
+      "status": "pending"
+    }
   ]
 }

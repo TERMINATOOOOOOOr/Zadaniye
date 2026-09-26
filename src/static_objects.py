@@ -329,6 +329,7 @@ PASSING_MOVE_REL = 0.5
 
 
 RED_LIFE_FRAC = 0.6      # объект, живущий в основном во время красного, — часть очереди, которую детектор не дотрекал
+WARMUP_SEC = 20.0        # фон строится с первого кадра: «призраки» машин из него живут первые секунды и не считаются
 
 
 def red_fraction(obj: StaticObject, signal) -> float:
@@ -347,6 +348,8 @@ def context_reason(obj: StaticObject, tracks: list[Track], signal=None) -> str:
     (очередь на красный, а не предмет на живой дороге); иначе 'ok'."""
     life = max(obj.t1 - obj.t0, 1e-6)
     size = max(obj.x2 - obj.x1, obj.y2 - obj.y1, 1.0)
+    if obj.t0 < WARMUP_SEC:
+        return "warmup"
     if red_fraction(obj, signal) >= RED_LIFE_FRAC:
         return "queue_red"
     passing: set[int] = set()
